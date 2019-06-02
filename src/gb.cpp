@@ -1,12 +1,12 @@
 #pragma once
 #include <iostream>
-#include <SFML/Graphics.hpp>
+#include "display.hpp"
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(200, 200), "SFML works!");
-    sf::CircleShape shape(100.f);
-    shape.setFillColor(sf::Color::Green);
+    Resolution r{ 160, 144 };
+    sf::RenderWindow w(sf::VideoMode(r.width, r.height), "gb");
+    Display window(r, std::move(w));
 
     while (window.isOpen())
     {
@@ -17,9 +17,7 @@ int main()
                 window.close();
         }
 
-        window.clear();
-        window.draw(shape);
-        window.display();
+        window.render();
     }
 
     return EXIT_SUCCESS;

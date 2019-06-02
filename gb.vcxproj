@@ -20,9 +20,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\cpu.hpp" />
+    <ClInclude Include="src\display.hpp" />
+    <ClInclude Include="src\mmu.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\display.cpp" />
     <ClCompile Include="src\gb.cpp" />
+    <ClCompile Include="src\mmu.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

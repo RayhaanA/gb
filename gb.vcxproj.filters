@@ -18,9 +18,21 @@
     <ClInclude Include="include\cpu.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\display.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mmu.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\gb.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\display.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mmu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
