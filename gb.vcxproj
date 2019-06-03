@@ -19,14 +19,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\cpu.hpp" />
-    <ClInclude Include="src\display.hpp" />
-    <ClInclude Include="src\mmu.hpp" />
+    <ClInclude Include="src\Display.hpp" />
+    <ClInclude Include="src\MMU.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\display.cpp" />
+    <ClCompile Include="src\CPU.cpp" />
+    <ClCompile Include="src\CPU.hpp" />
+    <ClCompile Include="src\Display.cpp" />
     <ClCompile Include="src\gb.cpp" />
-    <ClCompile Include="src\mmu.cpp" />
+    <ClCompile Include="src\MMU.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

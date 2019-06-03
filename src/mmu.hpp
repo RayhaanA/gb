@@ -22,10 +22,10 @@ private:
     */
     std::array<uint8_t, std::numeric_limits<uint16_t>::max()> mmap;
 public:
-    MMU();
+    MMU(std::array<uint8_t, std::numeric_limits<uint16_t>::max()> m);
     ~MMU();
 
-    uint8_t readMemory();
+    uint8_t readMemory(uint16_t address);
     void writeMemory(uint8_t data, uint16_t address);
 };
 

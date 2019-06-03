@@ -17,8 +17,8 @@ public:
     Display(Resolution r, sf::RenderWindow&& window);
     ~Display();
     void render();
-    bool isOpen();
-    bool pollEvent(sf::Event& event);
-    void close();
+    inline bool isOpen() { return window.isOpen(); }
+    inline bool pollEvent(sf::Event& event) { return window.pollEvent(event); }
+    inline void close() { window.close(); }
 };
 

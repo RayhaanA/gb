@@ -15,18 +15,3 @@ void Display::render()
     window.clear();
     window.display();
 }
-
-bool Display::isOpen()
-{
-    return window.isOpen();
-}
-
-bool Display::pollEvent(sf::Event& event)
-{
-    return window.pollEvent(event);
-}
-
-void Display::close()
-{
-    window.close();
-}

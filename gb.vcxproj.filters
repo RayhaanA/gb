@@ -15,24 +15,27 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\cpu.hpp">
+    <ClInclude Include="src\Display.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\display.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\mmu.hpp">
+    <ClInclude Include="src\MMU.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Display.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\gb.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\display.cpp">
+    <ClCompile Include="src\MMU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\mmu.cpp">
+    <ClCompile Include="src\CPU.hpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
