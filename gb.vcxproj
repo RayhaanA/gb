@@ -21,6 +21,8 @@
   <ItemGroup>
     <ClInclude Include="src\Display.hpp" />
     <ClInclude Include="src\MMU.hpp" />
+    <ClInclude Include="src\Opcodes.hpp" />
+    <ClInclude Include="src\Register.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\CPU.cpp" />
@@ -28,6 +30,8 @@
     <ClCompile Include="src\Display.cpp" />
     <ClCompile Include="src\gb.cpp" />
     <ClCompile Include="src\MMU.cpp" />
+    <ClCompile Include="src\Opcodes.cpp" />
+    <ClCompile Include="src\Register.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
