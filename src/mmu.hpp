@@ -1,6 +1,23 @@
 #pragma once
 
 #include <array>
+#include <unordered_map>
+
+std::unordered_map<std::string, uint16_t> addressRanges
+{
+    {"ROM0",  0x3FFF},
+    {"ROMN", 0x7FFF},
+    {"VRAM", 0x9FFF},
+    {"ERAM",  0xBFFF},
+    {"WRAM0", 0xCFFF},
+    {"WRAM1",  0xDFFF},
+    {"WRAM0_ECHO",  0xFDFF},
+    {"SPRITE_TABLE",  0xFE9F},
+    {"UNUSABLE",  0xFEFF},
+    {"IO",  0xFF7F},
+    {"HRAM",  0xFFFE},
+    {"INTERRUPT_ENABLE",  0xFFFF}
+};
 
 class MMU
 {
@@ -20,7 +37,18 @@ private:
       FF80-FFFE   High RAM (HRAM)
       FFFF        Interrupt Enable Register
     */
-    std::array<uint8_t, std::numeric_limits<uint16_t>::max()> mmap;
+    std::array<uint8_t, 0x3FFF> rom0;
+    std::array<uint8_t, 0x3FFF> romN;
+    std::array<uint8_t, 0x1FFF> vram;
+    std::array<uint8_t, 0x1FFF> eram;
+    std::array<uint8_t, 0x0FFF> wram0;
+    std::array<uint8_t, 0x0FFF> wram1;
+    std::array<uint8_t, 0x1DFF> wram0Echo;
+    std::array<uint8_t, 0x9F> spriteTable;
+    std::array<uint8_t, 0x7F> io;
+    std::array<uint8_t, 0x7E> hram;
+    bool interruptEnableFlag = true;
+
 public:
     MMU(std::array<uint8_t, std::numeric_limits<uint16_t>::max()> m);
     ~MMU();
