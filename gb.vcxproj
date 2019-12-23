@@ -22,7 +22,8 @@
     <ClInclude Include="src\Display.hpp" />
     <ClInclude Include="src\MMU.hpp" />
     <ClInclude Include="src\Opcodes.hpp" />
-    <ClInclude Include="src\Register.hpp" />
+    <ClInclude Include="src\Registers.hpp" />
+    <ClInclude Include="src\util\ParseBinFile.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\CPU.cpp" />
@@ -30,8 +31,7 @@
     <ClCompile Include="src\Display.cpp" />
     <ClCompile Include="src\gb.cpp" />
     <ClCompile Include="src\MMU.cpp" />
-    <ClCompile Include="src\Opcodes.cpp" />
-    <ClCompile Include="src\Register.cpp" />
+    <ClCompile Include="src\Registers.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -99,6 +99,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)SFML</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SFML_STATIC;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)/</ObjectFileName>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>

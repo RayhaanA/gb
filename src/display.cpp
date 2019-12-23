@@ -1,4 +1,4 @@
-#include "display.hpp"
+#include "Display.hpp"
 
 Display::Display(Resolution r, sf::RenderWindow&& window) : windowSize(r), window(window)
 {

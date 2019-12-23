@@ -1,27 +1,28 @@
 #pragma once
-
-#include <array>
+#include <vector>
 #include <unordered_map>
-
-std::unordered_map<std::string, uint16_t> addressRanges
-{
-    {"ROM0",  0x3FFF},
-    {"ROMN", 0x7FFF},
-    {"VRAM", 0x9FFF},
-    {"ERAM",  0xBFFF},
-    {"WRAM0", 0xCFFF},
-    {"WRAM1",  0xDFFF},
-    {"WRAM0_ECHO",  0xFDFF},
-    {"SPRITE_TABLE",  0xFE9F},
-    {"UNUSABLE",  0xFEFF},
-    {"IO",  0xFF7F},
-    {"HRAM",  0xFFFE},
-    {"INTERRUPT_ENABLE",  0xFFFF}
-};
+#include <iostream>
+#include <iomanip>
 
 class MMU
 {
 private:
+    std::unordered_map<std::string, uint16_t> addressRanges
+    {
+        {"ROM0",  0x3FFF},
+        {"ROMN", 0x7FFF},
+        {"VRAM", 0x9FFF},
+        {"ERAM",  0xBFFF},
+        {"WRAM0", 0xCFFF},
+        {"WRAM1",  0xDFFF},
+        {"WRAM0_ECHO",  0xFDFF},
+        {"SPRITE_TABLE",  0xFE9F},
+        {"UNUSABLE",  0xFEFF},
+        {"IO",  0xFF7F},
+        {"HRAM",  0xFFFE},
+        {"INTERRUPT_ENABLE",  0xFFFF}
+    };
+
     /*
       General Memory Map
       0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00)
@@ -37,23 +38,42 @@ private:
       FF80-FFFE   High RAM (HRAM)
       FFFF        Interrupt Enable Register
     */
-    std::array<uint8_t, 0x3FFF> rom0;
-    std::array<uint8_t, 0x3FFF> romN;
-    std::array<uint8_t, 0x1FFF> vram;
-    std::array<uint8_t, 0x1FFF> eram;
-    std::array<uint8_t, 0x0FFF> wram0;
-    std::array<uint8_t, 0x0FFF> wram1;
-    std::array<uint8_t, 0x1DFF> wram0Echo;
-    std::array<uint8_t, 0x9F> spriteTable;
-    std::array<uint8_t, 0x7F> io;
-    std::array<uint8_t, 0x7E> hram;
-    bool interruptEnableFlag = true;
+    std::vector<uint8_t> memory;
+    bool interruptEnableFlag = false;
 
 public:
-    MMU(std::array<uint8_t, std::numeric_limits<uint16_t>::max()> m);
-    ~MMU();
+    MMU(std::vector<uint8_t> rom) {
+        memory = std::vector<uint8_t>(0x10000);
+        for (size_t i = 0; i < rom.size(); ++i) {
+            memory[i] = rom[i];
+        }
+    }
+    ~MMU() = default;
 
-    uint8_t readMemory(uint16_t address);
-    void writeMemory(uint8_t data, uint16_t address);
+    void printMemory(size_t start, size_t end) {
+        if (end > memory.size()) {
+            std::cout << memory.size() << "\n";
+            std::cerr << "Trying to print out of memory bounds!" << std::endl;
+            return;
+        }
+
+        for (size_t i = start; i <= end; ++i) {
+            if (i % 16 == 0) {
+                std::cout << "\n";
+            }
+
+            if (i % 16 != 0) {
+                std::cout << " ";
+            }
+
+            std::cout << std::setfill('0') << std::setw(sizeof(uint8_t) * 2)
+               << std::uppercase <<  std::hex << static_cast<uint16_t>(memory[i]) 
+               << std::dec << std::nouppercase;
+        }
+        std::cout << "\n";
+    }
+
+    uint8_t read(uint16_t address);
+    void write(uint8_t data, uint16_t address);
 };
 

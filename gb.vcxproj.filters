@@ -21,10 +21,13 @@
     <ClInclude Include="src\MMU.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Register.hpp">
+    <ClInclude Include="src\Registers.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Opcodes.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\ParseBinFile.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -38,17 +41,14 @@
     <ClCompile Include="src\MMU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\CPU.hpp">
-      <Filter>Header Files</Filter>
+    <ClCompile Include="src\Registers.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\CPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Register.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Opcodes.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\CPU.hpp">
+      <Filter>Header Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
