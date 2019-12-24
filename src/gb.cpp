@@ -15,7 +15,7 @@ int main()
 
     cpu.printMemory(0, 255);
     cpu.printRegisters();
-    while (cpu.getPC() != 0x2E) {
+    while (cpu.getPC() != 0x64) {
         //std::cout << "ITERATION " << i << "====== START\n";
         cpu.tick();
        // cpu.printRegisters();

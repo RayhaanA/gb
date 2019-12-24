@@ -60,6 +60,7 @@ private:
     void DAA();
     void CPL();
     void LD(Register& dest, Register src);
+    void LD(Register& dest, uint16_t address);
     void LD(RegisterPair address, Register src);
     void LD(Register& dest, uint8_t value);
     void LD(RegisterPair& dest, uint16_t value);
