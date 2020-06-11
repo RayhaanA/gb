@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <iomanip>
+#include "./util/Disassembler.hpp"
 
 class MMU
 {
@@ -66,14 +67,14 @@ public:
                 std::cout << " ";
             }
 
-            std::cout << std::setfill('0') << std::setw(sizeof(uint8_t) * 2)
-               << std::uppercase <<  std::hex << static_cast<uint16_t>(memory[i]) 
-               << std::dec << std::nouppercase;
+            util::printHex(memory[i], 2);
         }
         std::cout << "\n";
     }
 
-    uint8_t read(uint16_t address);
-    void write(uint8_t data, uint16_t address);
+    std::vector<uint8_t>& getMemory() { return memory; }
+
+    uint8_t read(uint16_t address, uint32_t& cycles);
+    void write(uint8_t data, uint16_t address, uint32_t& cycles);
 };
 

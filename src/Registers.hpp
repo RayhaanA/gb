@@ -1,14 +1,16 @@
 #pragma once
 #include <inttypes.h>
+#include <iostream>
+#include <ios>
 #include <memory>
 #include <bitset>
 
 struct Register {
     uint8_t data = 0;
 
-    Register();
-    Register(uint8_t value);
-    ~Register();
+    Register::Register() = default;
+    Register::Register(uint8_t value) : data(value) {}
+    Register::~Register() {}
 
     Register& operator++() {
         data++;
@@ -60,14 +62,23 @@ struct RegisterPair {
     std::unique_ptr<Register> high;
 
     RegisterPair() = delete;
-    RegisterPair(Register* low, Register* high);
     RegisterPair(Register&& r, Register&& l) = delete;
-    RegisterPair(const RegisterPair& other);
-    ~RegisterPair();
 
-    uint16_t getData() const;
-    uint8_t getMSB() const;
-    uint8_t getLSB() const;
+    RegisterPair::RegisterPair(Register* low, Register* high) : low(low), high(high) {}
+
+    RegisterPair::RegisterPair(const RegisterPair& other) {
+        low = std::unique_ptr<Register>(new Register(other.getLSB()));
+        high = std::unique_ptr<Register>(new Register(other.getMSB()));
+    }
+
+    RegisterPair::~RegisterPair() {
+        low.release();
+        high.release();
+    }
+
+    uint16_t RegisterPair::getData() const { return high->data << 8 | low->data; }
+    uint8_t RegisterPair::getMSB() const { return high->data; }
+    uint8_t RegisterPair::getLSB() const { return low->data; }
 
     RegisterPair& operator++() {
         uint16_t data = getData();
@@ -128,11 +139,11 @@ struct RegisterPair {
 
 struct SpecialRegister {
     uint16_t data;
-    uint8_t getMSB() const;
-    uint8_t getLSB() const;
 
-    SpecialRegister();
-    ~SpecialRegister();
+    SpecialRegister::SpecialRegister() : data(0) {}
+    SpecialRegister::~SpecialRegister() = default;
+    uint8_t SpecialRegister::getMSB() const { return (data & 0xFF00) >> 8; }
+    uint8_t SpecialRegister::getLSB() const { return data & 0xFF; }
 
     SpecialRegister& operator++() {
         ++data;

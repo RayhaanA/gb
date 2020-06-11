@@ -1,8 +1,9 @@
-#include "mmu.hpp"
+#include "MMU.hpp"
 #include <iostream>
 
-uint8_t MMU::read(uint16_t address)
+uint8_t MMU::read(uint16_t address, uint32_t& cycles)
 {
+    ++cycles;
     if (address <= addressRanges["ROM0"]) { return memory[address]; } 
     else if (address <= addressRanges["ROMN"]) { return memory[address]; }
     else if (address <= addressRanges["VRAM"]) { return memory[address]; }
@@ -21,18 +22,16 @@ uint8_t MMU::read(uint16_t address)
     }
 }
 
-void MMU::write(uint8_t data, uint16_t address)
+void MMU::write(uint8_t data, uint16_t address, uint32_t& cycles)
 {
+    ++cycles;
     if (address <= addressRanges["ROM0"]) { std::cout << "Tried to write to to ROM at " << std::hex << address << std::dec << "\n"; return; }
     else if (address <= addressRanges["ROMN"]) { std::cout << "Tried to write to to ROM at " << std::hex << address << std::dec << "\n";; return; }
     else if (address <= addressRanges["VRAM"]) { memory[address] = data; }
     else if (address <= addressRanges["ERAM"]) { memory[address] = data; }
     else if (address <= addressRanges["WRAM0"]) { memory[address] = data; }
     else if (address <= addressRanges["WRAM1"]) { memory[address] = data; }
-    else if (address <= addressRanges["WRAM0_ECHO"]) { 
-
-        memory[address] = data;
-    }
+    else if (address <= addressRanges["WRAM0_ECHO"]) { memory[address] = data; }
     else if (address <= addressRanges["SPRITE_TABLE"]) { memory[address] = data; }
     else if (address <= addressRanges["UNSABLE"]) { std::cout << "Tried to write to unusable address space at address " << std::hex << address << std::dec << "\n"; return; }
     else if (address <= addressRanges["IO"]) { std::cout << "Writing to address in IO range\n"; memory[address] = data; }

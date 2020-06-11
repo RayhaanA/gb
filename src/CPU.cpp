@@ -1,5 +1,15 @@
-#pragma once
 #include "CPU.hpp"
+
+void CPU::tick() {
+    uint16_t op = memory.read(PC++.data, cycles);
+    if (op == 0xCB) {
+        op = memory.read(PC++.data, cycles);
+        callInstructionCB(op);
+    }
+    else {
+        callInstruction(op);
+    }
+}
 
 void CPU::callInstruction(uint16_t instruction) {
     switch (instruction) {
@@ -522,31 +532,16 @@ void CPU::callInstructionCB(uint16_t instruction) {
     }
 }
 
-
-void CPU::tick()
-{
-    uint16_t op = memory.read(PC++.data);
-    if (op == 0xCB) {
-        op = memory.read(PC++.data);
-        callInstructionCB(op);
-    }
-    else {
-        callInstruction(op);
-    }
-}
-
 //  Utilities
-uint16_t CPU::makeU16(uint8_t lsb, uint8_t msb)
-{
+uint16_t CPU::makeU16(uint8_t lsb, uint8_t msb) {
     uint16_t temp = lsb;
     temp |= msb << 8;
 
     return temp;
 }
 
-uint8_t CPU::readU8()
-{
-    uint8_t data = memory.read(PC++.data);
+uint8_t CPU::readU8() {
+    uint8_t data = memory.read(PC++.data, cycles);
     return data;
 }
 
@@ -558,7 +553,7 @@ uint16_t CPU::readU16() {
 
 int8_t CPU::readS8()
 {
-    int8_t data = memory.read(PC++.data);
+    int8_t data = static_cast<int8_t>(memory.read(PC++.data, cycles));
     return data;
 }
 
@@ -805,50 +800,52 @@ void CPU::JP(bool condition, uint16_t address) {
 }
 
 void CPU::JR(int8_t offset) {
-    PC = static_cast<int16_t>(PC.data) + offset;
+    PC = PC.data + offset;
+    ++cycles;
 }
 
 void CPU::JR(bool condition, int8_t offset) {
     if (condition) {
-        PC = static_cast<uint16_t>(static_cast<int32_t>(PC.data) + offset);
+        PC = PC.data + offset;
+        ++cycles;
     }
 }
 
 void CPU::CALL(uint16_t address) {
-    memory.write(PC.getMSB(), --SP.data);
-    memory.write(PC.getLSB(), --SP.data);
+    memory.write(PC.getMSB(), --SP.data, cycles);
+    memory.write(PC.getLSB(), --SP.data, cycles);
 
     PC = address;
 }
 
 void CPU::CALL(bool condition, uint16_t address) {
     if (condition) {
-        memory.write(PC.getMSB(), --SP.data);
-        memory.write(PC.getLSB(), --SP.data);
+        memory.write(PC.getMSB(), --SP.data, cycles);
+        memory.write(PC.getLSB(), --SP.data, cycles);
 
         PC = address;
     }
 }
 
 void CPU::RET() {
-    uint8_t low = memory.read(SP++.data);
-    uint8_t high = memory.read(SP++.data);
+    uint8_t low = memory.read(SP++.data, cycles);
+    uint8_t high = memory.read(SP++.data, cycles);
 
     PC = makeU16(low, high);
 }
 
 void CPU::RET(bool condition) {
     if (condition) {
-        uint8_t low = memory.read(SP++.data);
-        uint8_t high = memory.read(SP++.data);
+        uint8_t low = memory.read(SP++.data, cycles);
+        uint8_t high = memory.read(SP++.data, cycles);
 
         PC = makeU16(low, high);
     }
 }
 
 void CPU::RETI() {
-    uint8_t low = memory.read(SP++.getLSB());
-    uint8_t high = memory.read(SP++.getMSB());
+    uint8_t low = memory.read(SP++.getLSB(), cycles);
+    uint8_t high = memory.read(SP++.getMSB(), cycles);
 
     PC = makeU16(low, high);
 
@@ -856,8 +853,8 @@ void CPU::RETI() {
 }
 
 void CPU::RST(uint8_t lsb) {
-    memory.write(PC.getMSB(), --SP.data);
-    memory.write(PC.getLSB(), --SP.data);
+    memory.write(PC.getMSB(), --SP.data, cycles);
+    memory.write(PC.getLSB(), --SP.data, cycles);
 
     PC = makeU16(lsb, 0x00);
 }
@@ -928,11 +925,11 @@ void CPU::LD(Register& dest, Register src) {
 }
 
 void CPU::LD(Register& dest, uint16_t address) {
-    dest.data = memory.read(address);
+    dest.data = memory.read(address, cycles);
 }
 
 void CPU::LD(RegisterPair address, Register src) {
-    memory.write(src.data, address.getData());
+    memory.write(src.data, address.getData(), cycles);
 }
 
 void CPU::LD(Register& dest, uint8_t value) {
@@ -944,7 +941,7 @@ void CPU::LD(RegisterPair& dest, uint16_t value) {
 }
 
 void CPU::LD(Register& dest, RegisterPair address) {
-    dest = memory.read(address.getData());
+    dest = memory.read(address.getData(), cycles);
 }
 
 void CPU::LD(SpecialRegister& dest, RegisterPair src) {
@@ -956,43 +953,44 @@ void CPU::LD(SpecialRegister& dest, uint16_t value) {
 }
 
 void CPU::LD(uint16_t address, SpecialRegister src) {
-    memory.write(src.getLSB(), address);
-    memory.write(src.getMSB(), address);
+    memory.write(src.getLSB(), address, cycles);
+    memory.write(src.getMSB(), address, cycles);
 }
 
-void CPU::LD(uint16_t address, Register src)
-{
-    memory.write(src.data, address);
+void CPU::LD(uint16_t address, Register src) {
+    memory.write(src.data, address, cycles);
 }
 
 void CPU::LD(RegisterPair& dest, SpecialRegister src, int8_t offset) {
-    unsetFlags(Z_FLAG | N_FLAG);
-    int32_t srcData = static_cast<int32_t>(src.data);
+    unsetFlags(Z_FLAG | N_FLAG | H_FLAG | C_FLAG);
 
-    if (((srcData & 0xF) + (offset & 0xF)) & 0x10) {
-        setFlags(H_FLAG);
+    if (offset >= 0) {
+        if (((src.data & 0xFF) + offset) > 0xFF) {
+            setFlags(C_FLAG);
+        }
+        if (((src.data & 0xF) + (offset & 0xF)) > 0xF) {
+            setFlags(H_FLAG);
+        }
     }
     else {
-        unsetFlags(H_FLAG);
+        if (((src.data + offset) & 0xFF) <= (src.data & 0xFF)) {
+            setFlags(C_FLAG);
+        }
+        if (((src.data + offset) & 0xF) <= (src.data & 0xF)) {
+            setFlags(H_FLAG);
+        }
     }
 
-    if ((srcData & 0xFF + offset) & 0xFF00) {
-        setFlags(C_FLAG);
-    }
-    else {
-        unsetFlags(C_FLAG);
-    }
-
-    dest = static_cast<uint16_t>(srcData + offset);
+    dest = src.data + offset;
 }
 
 void CPU::LDI(Register src, bool setA) {
-    setA ? A = memory.read(HL.getData()) : memory.write(src.data, HL.getData());
+    setA ? A = memory.read(HL.getData(), cycles) : memory.write(src.data, HL.getData(), cycles);
     ++HL;
 }
 
 void CPU::LDD(Register src, bool setA) {
-    setA ? A = memory.read(HL.getData()) : memory.write(src.data, HL.getData());
+    setA ? A = memory.read(HL.getData(), cycles) : memory.write(src.data, HL.getData(), cycles);
     --HL;
 }
 void CPU::INC(Register& r) {
@@ -1017,15 +1015,17 @@ void CPU::INC(Register& r) {
 
 void CPU::INC(RegisterPair& r) {
     ++r;
+    ++cycles;
 }
 
 void CPU::INC(SpecialRegister& r) {
     ++r;
+    ++cycles;
 }
 
 void CPU::INC(uint16_t address) {
-    uint8_t data = memory.read(address);
-    memory.write(++data, address);
+    uint8_t data = memory.read(address, cycles);
+    memory.write(++data, address, cycles);
 }
 
 void CPU::DEC(Register& r) {
@@ -1050,6 +1050,7 @@ void CPU::DEC(Register& r) {
 
 void CPU::DEC(RegisterPair& r) {
     --r;
+    --cycles;
 }
 
 void CPU::DEC(SpecialRegister& r) {
@@ -1057,8 +1058,8 @@ void CPU::DEC(SpecialRegister& r) {
 }
 
 void CPU::DEC(uint16_t address) {
-    uint8_t data = memory.read(address);
-    memory.write(--data, address);
+    uint8_t data = memory.read(address, cycles);
+    memory.write(--data, address, cycles);
 }
 
 void CPU::ADD(Register src) {
@@ -1072,33 +1073,36 @@ void CPU::ADD(uint8_t data)
 }
 
 void CPU::ADD(uint16_t address) {
-    addByteValueToA(memory.read(address));
+    addByteValueToA(memory.read(address, cycles));
 }
 
 void CPU::ADD(RegisterPair& dest, RegisterPair src) {
     addTwoByteValueToRegisterPair(dest, src.getData());
+    ++cycles;
 }
 
 void CPU::ADD(SpecialRegister& dest, int8_t data)
 {
-    unsetFlags(Z_FLAG | N_FLAG);
-    int32_t srcVal = static_cast<int32_t>(dest.data);
+    unsetFlags(Z_FLAG | N_FLAG | H_FLAG | C_FLAG);
 
-    if (((srcVal & 0xF) + (data & 0xF)) & 0x10) {
-        setFlags(H_FLAG);
+    if (data >= 0) {
+        if (((dest.data & 0xFF) + data) > 0xFF) {
+            setFlags(C_FLAG);
+        }
+        if (((dest.data & 0xF) + (data & 0xF)) > 0xF) {
+            setFlags(H_FLAG);
+        }
     }
     else {
-        unsetFlags(H_FLAG);
+        if (((dest.data + data) & 0xFF) <= (dest.data & 0xFF)) {
+            setFlags(C_FLAG);
+        }
+        if (((dest.data + data) & 0xF) <= (dest.data & 0xF)) {
+            setFlags(H_FLAG);
+        }
     }
 
-    if (((srcVal & 0xFF) + data) & 0xFF00) {
-        setFlags(C_FLAG);
-    }
-    else {
-        unsetFlags(C_FLAG);
-    }
-
-    dest.data = static_cast<uint16_t>(srcVal + data);
+    dest.data = dest.data + data;
 }
 
 void CPU::ADD(RegisterPair& dest, SpecialRegister src) {
@@ -1110,7 +1114,7 @@ void CPU::SUB(Register src) {
 }
 
 void CPU::SUB(uint16_t address) {
-    subByteValueFromA(memory.read(address));
+    subByteValueFromA(memory.read(address, cycles));
 }
 
 void CPU::SUB(uint8_t data) {
@@ -1122,7 +1126,7 @@ void CPU::AND(Register src) {
 }
 
 void CPU::AND(uint16_t address) {
-    andByteValueAgainstA(memory.read(address));
+    andByteValueAgainstA(memory.read(address, cycles));
 }
 
 void CPU::AND(uint8_t data) {
@@ -1134,7 +1138,7 @@ void CPU::OR(Register src) {
 }
 
 void CPU::OR(uint16_t address) {
-    orByteValueAgainstA(memory.read(address));
+    orByteValueAgainstA(memory.read(address, cycles));
 }
 
 void CPU::OR(uint8_t data) {
@@ -1146,7 +1150,7 @@ void CPU::XOR(Register src) {
 }
 
 void CPU::XOR(uint16_t address) {
-    xorByteValueAgainstA(memory.read(address));
+    xorByteValueAgainstA(memory.read(address, cycles));
 }
 
 void CPU::XOR(uint8_t data) {
@@ -1158,7 +1162,7 @@ void CPU::CP(Register src) {
 }
 
 void CPU::CP(uint16_t address) {
-    cpByteValueAgainstA(memory.read(address));
+    cpByteValueAgainstA(memory.read(address, cycles));
 
 }
 
@@ -1171,7 +1175,7 @@ void CPU::ADC(Register src) {
 }
 
 void CPU::ADC(uint16_t address) {
-    adcByteValueAgainstA(memory.read(address));
+    adcByteValueAgainstA(memory.read(address, cycles));
 }
 
 void CPU::ADC(uint8_t data) {
@@ -1183,7 +1187,7 @@ void CPU::SBC(Register src) {
 }
 
 void CPU::SBC(uint16_t address) {
-    sbcByteValueAgainstA(memory.read(address));
+    sbcByteValueAgainstA(memory.read(address, cycles));
 }
 
 void CPU::SBC(uint8_t data) {
@@ -1191,8 +1195,8 @@ void CPU::SBC(uint8_t data) {
 }
 
 void CPU::POP(RegisterPair& dest) {
-    dest.low->data = memory.read(SP++.data);
-    dest.high->data = memory.read(SP++.data);
+    dest.low->data = memory.read(SP++.data, cycles);
+    dest.high->data = memory.read(SP++.data, cycles);
 
     if (dest.low.get() == &F) {
         F.data &= 0xF0;
@@ -1200,8 +1204,8 @@ void CPU::POP(RegisterPair& dest) {
 }
 
 void CPU::PUSH(RegisterPair& dest) {
-    memory.write(dest.getMSB(), --SP.data);
-    memory.write(dest.getLSB(), --SP.data);
+    memory.write(dest.getMSB(), --SP.data, cycles);
+    memory.write(dest.getLSB(), --SP.data, cycles);
 }
 
 void CPU::RLA() {
@@ -1295,7 +1299,7 @@ void CPU::RLC(Register& r) {
 }
 
 void CPU::RLC(uint16_t address) {
-    uint8_t data = memory.read(address);
+    uint8_t data = memory.read(address, cycles);
     bool msbSet = data & 0x80;
 
     data <<= 1;
@@ -1317,7 +1321,7 @@ void CPU::RLC(uint16_t address) {
 
     unsetFlags(H_FLAG | N_FLAG);
 
-    memory.write(data, address);
+    memory.write(data, address, cycles);
 }
 
 void CPU::RRC(Register& r) {
@@ -1343,7 +1347,7 @@ void CPU::RRC(Register& r) {
 }
 
 void CPU::RRC(uint16_t address) {
-    uint8_t data = memory.read(address);
+    uint8_t data = memory.read(address, cycles);
     bool lsbSet = data & 0x1;
 
     data >>= 1;
@@ -1365,7 +1369,7 @@ void CPU::RRC(uint16_t address) {
 
     unsetFlags(H_FLAG | N_FLAG);
 
-    memory.write(data, address);
+    memory.write(data, address, cycles);
 }
 
 void CPU::RL(Register& r) {
@@ -1393,7 +1397,7 @@ void CPU::RL(Register& r) {
 }
 
 void CPU::RL(uint16_t address) {
-    uint16_t shiftedData = memory.read(address) << 1;
+    uint16_t shiftedData = memory.read(address, cycles) << 1;
 
     shiftedData |= checkFlags(C_FLAG) ? 0x1 : 0x0;
 
@@ -1413,7 +1417,7 @@ void CPU::RL(uint16_t address) {
 
     unsetFlags(H_FLAG | N_FLAG);
 
-    memory.write(shiftedData & 0xFF, address);
+    memory.write(shiftedData & 0xFF, address, cycles);
 }
 
 void CPU::RR(Register& r) {
@@ -1444,7 +1448,7 @@ void CPU::RR(Register& r) {
 }
 
 void CPU::RR(uint16_t address) {
-    uint8_t data = memory.read(address);
+    uint8_t data = memory.read(address, cycles);
 
     bool carry = checkFlags(C_FLAG);
 
@@ -1467,7 +1471,7 @@ void CPU::RR(uint16_t address) {
 
     unsetFlags(H_FLAG | N_FLAG);
 
-    memory.write(data, address);
+    memory.write(data, address, cycles);
 }
 
 void CPU::SLA(Register& r) {
@@ -1491,7 +1495,7 @@ void CPU::SLA(Register& r) {
 }
 
 void CPU::SLA(uint16_t address) {
-    uint8_t data = memory.read(address);
+    uint8_t data = memory.read(address, cycles);
 
     if (data & 0x80) {
         setFlags(C_FLAG);
@@ -1511,7 +1515,7 @@ void CPU::SLA(uint16_t address) {
         unsetFlags(Z_FLAG);
     }
 
-    memory.write(data, address);
+    memory.write(data, address, cycles);
 }
 void CPU::SRA(Register& r) {
     if (r.data & 0x01) {
@@ -1537,7 +1541,7 @@ void CPU::SRA(Register& r) {
 }
 
 void CPU::SRA(uint16_t address) {
-    uint8_t data = memory.read(address);
+    uint8_t data = memory.read(address, cycles);
     bool msbSet = data & 0x80;
 
     if (data & 0x01) {
@@ -1559,7 +1563,7 @@ void CPU::SRA(uint16_t address) {
         unsetFlags(Z_FLAG);
     }
 
-    memory.write(data, address);
+    memory.write(data, address, cycles);
 }
 
 void CPU::SWAP(Register& r) {
@@ -1579,7 +1583,7 @@ void CPU::SWAP(Register& r) {
 }
 
 void CPU::SWAP(uint16_t address) {
-    uint8_t data = memory.read(address);
+    uint8_t data = memory.read(address, cycles);
 
     uint8_t low = data & 0xF;
     uint8_t high = (data & 0xF0) >> 4;
@@ -1593,7 +1597,7 @@ void CPU::SWAP(uint16_t address) {
         unsetFlags(Z_FLAG);
     }
 
-    memory.write(data, address);
+    memory.write(data, address, cycles);
 
     unsetFlags(C_FLAG | H_FLAG | N_FLAG);
 }
@@ -1619,7 +1623,7 @@ void CPU::SRL(Register& r) {
 }
 
 void CPU::SRL(uint16_t address) {
-    uint8_t data = memory.read(address);
+    uint8_t data = memory.read(address, cycles);
 
     if (data & 0x01) {
         setFlags(C_FLAG);
@@ -1639,7 +1643,7 @@ void CPU::SRL(uint16_t address) {
         unsetFlags(Z_FLAG);
     }
 
-    memory.write(data, address);
+    memory.write(data, address, cycles);
 }
 
 void CPU::BIT(uint8_t position, Register src) {
@@ -1655,7 +1659,7 @@ void CPU::BIT(uint8_t position, Register src) {
 }
 
 void CPU::BIT(uint8_t position, uint16_t address) {
-    uint8_t data = memory.read(address);
+    uint8_t data = memory.read(address, cycles);
 
     setFlags(H_FLAG);
     unsetFlags(N_FLAG);
@@ -1673,9 +1677,9 @@ void CPU::RES(uint8_t position, Register src) {
 }
 
 void CPU::RES(uint8_t position, uint16_t address) {
-    uint8_t data = memory.read(address);
+    uint8_t data = memory.read(address, cycles);
     data &= ~(1 << position);
-    memory.write(data, address);
+    memory.write(data, address, cycles);
 }
 
 void CPU::SET(uint8_t position, Register src) {
@@ -1683,7 +1687,7 @@ void CPU::SET(uint8_t position, Register src) {
 }
 
 void CPU::SET(uint8_t position, uint16_t address) {
-    uint8_t data = memory.read(address);
+    uint8_t data = memory.read(address, cycles);
     data |= 1 << position;
-    memory.write(data, address);
+    memory.write(data, address, cycles);
 }

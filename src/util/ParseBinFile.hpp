@@ -4,7 +4,7 @@
 #include <iostream>
 
 namespace util {
-    std::vector<uint8_t> parseRomFile(std::string filepath) {
+    static std::vector<uint8_t> parseRomFile(std::string filepath) {
         std::ifstream romFile;
         romFile.exceptions(std::ifstream::badbit);
 

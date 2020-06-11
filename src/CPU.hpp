@@ -8,7 +8,6 @@ constexpr uint8_t N_FLAG = 1 << 6;
 constexpr uint8_t H_FLAG = 1 << 5;
 constexpr uint8_t C_FLAG = 1 << 4;
 
-
 class CPU {
 private:
     Register A, B, C, D, E, F, H, L;
@@ -20,6 +19,7 @@ private:
     bool IME = false; // Interrupt Master Enable Flag: Set through op codes
     bool stopped = false;
     MMU memory;
+    uint32_t cycles = 0;
 
     // Functions
     uint16_t makeU16(uint8_t lsb, uint8_t msb);
@@ -143,10 +143,11 @@ public:
     void callInstructionCB(uint16_t instruction);
     void tick();
     uint16_t getPC() const { return PC.data; }
+
     // For debugging
-    void printMemory(size_t start, size_t end) {
-        memory.printMemory(start, end);
-    }
+    //void printMemory(size_t start, size_t end) {
+    //    memory.printMemory(start, end);
+    //}
 
     void printRegisters() {
         std::cout << "A = " << A << "B = " << B << "C = " << C << "D = " << D << "E = " << E

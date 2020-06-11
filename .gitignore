@@ -2,3 +2,9 @@ Debug/
 Release/
 x64/
 *.user
+imgui/docs
+imgui/examples
+imgui/.github
+imgui-sfml/examples
+imgui-sfml/out
+imgui-sfml/.gitignore
