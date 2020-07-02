@@ -1,12 +1,9 @@
 #pragma once
 #include "Registers.hpp"
+#include "PPU.hpp"
 #include "MMU.hpp"
+#include "Timers.hpp"
 #include <iostream>
-
-constexpr uint8_t Z_FLAG = 1 << 7;
-constexpr uint8_t N_FLAG = 1 << 6;
-constexpr uint8_t H_FLAG = 1 << 5;
-constexpr uint8_t C_FLAG = 1 << 4;
 
 class CPU {
 private:
@@ -15,11 +12,18 @@ private:
     RegisterPair BC{ &C, &B };
     RegisterPair DE{ &E, &D };
     RegisterPair HL{ &L, &H };
+    uint8_t pA, pF, pB, pC, pD, pE, pH, pL, pIF, pIE;
+    uint16_t pPC, pSP, pAF, pBC, pDE, pHL;
     SpecialRegister PC, SP;
-    bool IME = false; // Interrupt Master Enable Flag: Set through op codes
-    bool stopped = false;
-    MMU memory;
+
+    bool interruptHandledThisTick = false;
     uint32_t cycles = 0;
+
+    std::unique_ptr<MMU> memory;
+    std::unique_ptr<PPU> ppu;
+    std::unique_ptr<Timers> timers;
+
+    uint16_t currInstruction = 0;
 
     // Functions
     uint16_t makeU16(uint8_t lsb, uint8_t msb);
@@ -29,6 +33,8 @@ private:
     void setFlags(uint8_t value);
     void unsetFlags(uint8_t value);
     bool checkFlags(uint8_t value);
+    void requestInterrupt(uint8_t data);
+    void clearInterruptRequest(uint8_t data);
 
     void addByteValueToA(uint8_t data);
     void addTwoByteValueToRegisterPair(RegisterPair& dest, uint16_t data);
@@ -45,6 +51,7 @@ private:
     void HALT();
     void JP(uint16_t address);
     void JP(bool condition, uint16_t address);
+    void JP_HL();
     void JR(int8_t offset);
     void JR(bool condition, int8_t offset);
     void CALL(uint16_t address);
@@ -65,10 +72,11 @@ private:
     void LD(Register& dest, uint8_t value);
     void LD(RegisterPair& dest, uint16_t value);
     void LD(Register& dest, RegisterPair address);
-    void LD(SpecialRegister&dest, RegisterPair src);
+    void LD(SpecialRegister& dest, RegisterPair src);
     void LD(SpecialRegister& dest, uint16_t value);
     void LD(uint16_t address, SpecialRegister src);
     void LD(uint16_t address, Register src);
+    void LD(uint16_t address, uint8_t data);
     void LD(RegisterPair& dest, SpecialRegister src, int8_t offset);
     void LDI(Register src, bool setA);
     void LDD(Register src, bool setA);
@@ -135,19 +143,132 @@ private:
     void RES(uint8_t position, uint16_t address);
     void SET(uint8_t position, Register src);
     void SET(uint8_t position, uint16_t address);
+   
+    inline void updatePreviousRegisterValues() {
+        pA = A.data;
+        pF = F.data;
+        pB = B.data;
+        pC = C.data;
+        pD = D.data;
+        pE = E.data;
+        pH = H.data;
+        pL = L.data;
+        pIF = getIF();
+        pIE = getIE();
+        pPC = PC.data;
+        pSP = SP.data;
+        pAF = AF.getData();
+        pBC = BC.getData();
+        pDE = DE.getData();
+        pHL = HL.getData();
+    }
+
+    bool haltBugActive = false; // System encounters a bug when halt mode is entered, IME = 0, and an Interrupt is ready and enabled
+                                // This shows up as the next instruction not incrementing the PC
+    void handleInterrupts();
+    bool checkForInterrupts();
+
+    // Increment cycles, check for interrupt enabling, incremeent timers, forward time change to PPU
+    void incrementCycleCount() {
+        cycles += CYCLES_PER_INCREMENT;
+        
+        if (enableInterruptsNextCycle) {
+            IME = true;
+            enableInterruptsNextCycle = false;
+        }
+
+        if (timaInterruptRequest) {
+            requestInterrupt(TIMER_INTERRUPT_FLAG);
+            memory->directWrite(memory->directRead(TMA_REG_ADDR), TIMA_REG_ADDR);
+            timaInterruptRequest = false;
+        }
+
+        timers->incrementTimers();
+
+        if (cycles > FREQUENCY) {
+            cycles -= FREQUENCY;
+        }
+
+        ppu->incrementCycleCount();
+    }
+
+    uint8_t readMemoryAndIncrementCycles(uint16_t address) {
+        uint8_t data = memory->read(address, *ppu);
+        incrementCycleCount();
+        return data;
+    }
+
+    void writeMemoryAndIncrementCycles(uint8_t data, uint16_t address) {
+        memory->write(data, address, *ppu);
+        incrementCycleCount();
+    }
+
 public:
-    CPU(MMU mmu) : memory(mmu) {}
-    ~CPU() {}
+    CPU() = default;
+    explicit CPU(MMU* mmu, PPU* p, Timers* t) {
+        memory = std::unique_ptr<MMU>(mmu);
+        ppu = std::unique_ptr<PPU>(p);
+        timers = std::unique_ptr<Timers>(t);
+        pA = pF = pB = pC = pD = pE = pH = pL = 0;
+        pPC = pSP = pAF =pBC = pDE = pHL = 0;
+    }
+    ~CPU() {
+        ppu.release();
+        memory.release();
+        timers.release();
+    }
 
     void callInstruction(uint16_t instruction);
     void callInstructionCB(uint16_t instruction);
-    void tick();
-    uint16_t getPC() const { return PC.data; }
 
-    // For debugging
-    //void printMemory(size_t start, size_t end) {
-    //    memory.printMemory(start, end);
-    //}
+    void tick();
+
+    std::vector<uint8_t>& getMemory()  { return memory->getMemory(); }
+    uint32_t getCurrentCycleCount() const { return cycles; }
+
+    uint8_t getA() const { return A.data; }
+    uint8_t getF() const { return F.data; }
+    uint8_t getB() const { return B.data; }
+    uint8_t getC() const { return C.data; }
+    uint8_t getD() const { return D.data; }
+    uint8_t getE() const { return E.data; }
+    uint8_t getH() const { return H.data; }
+    uint8_t getL() const { return L.data; }
+    uint16_t getAF() const { return AF.getData(); }
+    uint16_t getBC() const { return BC.getData(); }
+    uint16_t getDE() const { return DE.getData(); }
+    uint16_t getHL() const { return HL.getData(); }
+    uint16_t getSP() const { return SP.data; }
+    uint16_t getPC() const { return PC.data; }
+    uint8_t getIF() { return memory->directRead(IF_REG_ADDR); }
+    uint8_t getIE() { return memory->directRead(IE_REG_ADDR); }
+    uint8_t getAPrev() const { return pA; }
+    uint8_t getFPrev() const { return pF; }
+    uint8_t getBPrev() const { return pB; }
+    uint8_t getCPrev() const { return pC; }
+    uint8_t getDPrev() const { return pD; }
+    uint8_t getEPrev() const { return pE; }
+    uint8_t getHPrev() const { return pH; }
+    uint8_t getLPrev() const { return pL; }
+    uint8_t getIFPrev() const { return pIF; }
+    uint8_t getIEPrev() const { return pIE; }
+    uint16_t getAFPrev() const { return pAF; }
+    uint16_t getBCPrev() const { return pBC; }
+    uint16_t getDEPrev() const { return pDE; }
+    uint16_t getHLPrev() const { return pHL; }
+    uint16_t getSPPrev() const { return pSP; }
+    uint16_t getPCPrev() const { return pPC; }
+    uint16_t getCurrInstruction() const { return currInstruction; }
+
+    void reset() {
+        A = F = B = C = D = E = H = L = 0;
+        pA = pF = pB = pC = pD = pE = pH = pL = pIE = pIF = 0;
+        pPC = pSP = pBC = pDE = pHL = 0;
+        PC = SP = 0;
+        IME = false;
+        stopped = false;
+        cycles = 0;
+    }
 
     void printRegisters() {
         std::cout << "A = " << A << "B = " << B << "C = " << C << "D = " << D << "E = " << E
@@ -155,4 +276,20 @@ public:
             << "DE = " << DE << "AF = " << AF << "HL = " << HL << "SP = " << SP
            << "PC = " << PC;
      }
+
+    void runUntilRomStart() {
+        while (PC.data != 0x100) {
+            tick();
+        }
+
+        for (size_t i = 0; i < 0x100; ++i) {
+            memory->getMemory()[i] = memory->getBootAreaRemap()[i];
+        }
+    }
+
+    void runUntilCompletion() {
+        while (PC.data != pPC) {
+            tick();
+        }
+    }
 };

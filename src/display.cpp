@@ -11,10 +11,11 @@ Display::Display(Resolution r, sf::RenderWindow&& window) : windowSize(r), windo
 }
 
 Display::~Display() {
+    window.close();
 }
 
 void Display::render() {
-    window.clear();
+    clearWindow();
     ImGui::SFML::Render(window);
     window.display();
 }

@@ -19,7 +19,7 @@ struct Opcode {
 };
 
 namespace OpcodeInfo {
-    static std::array<Opcode, 256> OPCODES = {
+    std::array<Opcode, 256> OPCODES = {
         Opcode { "NOP", 1, 1, 1 },
         Opcode { "LD BC,", 3, 3, 3 },
         Opcode { "LD (BC), A", 2, 2, 1 },
@@ -54,7 +54,7 @@ namespace OpcodeInfo {
         Opcode { "RRA", 1, 1, 1 },
         Opcode { "JR NZ,", 2, 3, 2 },
         Opcode { "LD HL,", 3, 3, 3 },
-        Opcode { "LDI HL, A", 2, 2, 1 },
+        Opcode { "LDI (HL), A", 2, 2, 1 },
         Opcode { "INC HL", 2, 2, 1 },
         Opcode { "INC H", 1, 1, 1 },
         Opcode { "DEC H", 1, 1, 1 },
@@ -62,7 +62,7 @@ namespace OpcodeInfo {
         Opcode { "DAA", 1, 1, 1 },
         Opcode { "JR Z,", 2, 3, 2 },
         Opcode { "ADD HL, HL", 2, 2, 1 },
-        Opcode { "LDI A, HL", 2, 2, 1 },
+        Opcode { "LDI A, (HL)", 2, 2, 1 },
         Opcode { "DEC HL", 2, 2, 1 },
         Opcode { "INC L", 1, 1, 1 },
         Opcode { "DEC L", 1, 1, 1 },
@@ -70,7 +70,7 @@ namespace OpcodeInfo {
         Opcode { "CPL", 1, 1, 1 },
         Opcode { "JR NC,", 2, 3, 2 },
         Opcode { "LD SP,", 3, 3, 3 },
-        Opcode { "LDD HL, A", 2, 2, 1 },
+        Opcode { "LDD (HL), A", 2, 2, 1 },
         Opcode { "INC SP", 2, 2, 1 },
         Opcode { "INC (HL)", 3, 3, 1 },
         Opcode { "DEC (HL)", 3, 3, 1 },
@@ -78,7 +78,7 @@ namespace OpcodeInfo {
         Opcode { "SCF", 1, 1, 1 },
         Opcode { "JR C,", 2, 3, 2 },
         Opcode { "ADD HL, SP", 2, 2, 1 },
-        Opcode { "LDD A, HL", 2, 2, 1 },
+        Opcode { "LDD A, (HL)", 2, 2, 1 },
         Opcode { "DEC SP", 2, 2, 1 },
         Opcode { "INC A", 1, 1, 1 },
         Opcode { "DEC A", 1, 1, 1 },
@@ -278,7 +278,7 @@ namespace OpcodeInfo {
         Opcode { "RST 38H", 4, 4, 1 }
     };
 
-    static std::array<Opcode, 256> CB_OPCODES = {
+    std::array<Opcode, 256> CB_OPCODES = {
         Opcode { "RLC B", 2, 2, 2 },
         Opcode { "RLC C", 2, 2, 2 },
         Opcode { "RLC D", 2, 2, 2 },

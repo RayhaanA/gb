@@ -76,16 +76,15 @@ struct RegisterPair {
         high.release();
     }
 
-    uint16_t RegisterPair::getData() const { return high->data << 8 | low->data; }
-    uint8_t RegisterPair::getMSB() const { return high->data; }
-    uint8_t RegisterPair::getLSB() const { return low->data; }
+    inline uint16_t RegisterPair::getData() const { return high->data << 8 | low->data; }
+    inline uint8_t RegisterPair::getMSB() const { return high->data; }
+    inline uint8_t RegisterPair::getLSB() const { return low->data; }
 
     RegisterPair& operator++() {
         uint16_t data = getData();
         ++data;
-
         low->data = data & 0xFF;
-        high->data = data & 0xFF00;
+        high->data = (data & 0xFF00) >> 8;
 
         return *this;
     }
@@ -97,7 +96,7 @@ struct RegisterPair {
     }
 
     RegisterPair& operator--() {
-        uint16_t data = getData();
+        uint16_t data = high->data << 8 | low->data;
         --data;
 
         low->data = data & 0xFF;

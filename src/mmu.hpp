@@ -3,27 +3,13 @@
 #include <unordered_map>
 #include <iostream>
 #include <iomanip>
-#include "./util/Disassembler.hpp"
+#include "PPU.hpp"
+#include "./util/Logging.hpp"
+#include "./util/ParseBinFile.hpp"
 
 class MMU
 {
 private:
-    std::unordered_map<std::string, uint16_t> addressRanges
-    {
-        {"ROM0",  0x3FFF},
-        {"ROMN", 0x7FFF},
-        {"VRAM", 0x9FFF},
-        {"ERAM",  0xBFFF},
-        {"WRAM0", 0xCFFF},
-        {"WRAM1",  0xDFFF},
-        {"WRAM0_ECHO",  0xFDFF},
-        {"SPRITE_TABLE",  0xFE9F},
-        {"UNUSABLE",  0xFEFF},
-        {"IO",  0xFF7F},
-        {"HRAM",  0xFFFE},
-        {"INTERRUPT_ENABLE",  0xFFFF}
-    };
-
     /*
       General Memory Map
       0000-3FFF   16KB ROM Bank 00     (in cartridge, fixed at bank 00)
@@ -39,13 +25,22 @@ private:
       FF80-FFFE   High RAM (HRAM)
       FFFF        Interrupt Enable Register
     */
+    std::vector<uint8_t> bootAreaRemap;
     std::vector<uint8_t> memory;
-    bool interruptEnableFlag = false;
-
+    std::vector<uint8_t> rom;
 public:
-    MMU(std::vector<uint8_t> rom) {
+    MMU() = default;
+    explicit MMU(std::vector<uint8_t> r) : rom(r) {
+        bootAreaRemap = std::vector<uint8_t>(0x100);
         memory = std::vector<uint8_t>(0x10000);
-        for (size_t i = 0; i < rom.size(); ++i) {
+        std::vector<uint8_t> bootRom = util::parseRomFile("./roms/dmg_boot.bin");
+        for (size_t i = 0; i < bootRom.size(); ++i) {
+            memory[i] = bootRom[i];
+        }
+        for (size_t i = 0; i < bootRom.size(); ++i) {
+            bootAreaRemap[i] = rom[i];
+        }
+        for (size_t i = 0x100; i < rom.size(); ++i) {
             memory[i] = rom[i];
         }
     }
@@ -73,8 +68,28 @@ public:
     }
 
     std::vector<uint8_t>& getMemory() { return memory; }
+    std::vector<uint8_t>& getBootAreaRemap() { return bootAreaRemap; }
 
-    uint8_t read(uint16_t address, uint32_t& cycles);
-    void write(uint8_t data, uint16_t address, uint32_t& cycles);
+    uint8_t read(uint16_t address, PPU& ppu);
+    void write(uint8_t data, uint16_t address, PPU& ppu);
+    uint8_t directRead(uint16_t address) { return memory[address]; }
+    void directWrite(uint8_t data, uint16_t address) { memory[address] = data; }
+
+
+    void reset() {
+        std::vector<uint8_t> bootRom = util::parseRomFile("./roms/dmg_boot.bin");
+        for (size_t i = 0; i < bootRom.size(); ++i) {
+            memory[i] = bootRom[i];
+        }
+        for (size_t i = 0x100; i < rom.size(); ++i) {
+            memory[i] = rom[i];
+        }
+    }
+
+    void loadRom(std::vector<uint8_t> rom) {
+        for (size_t i = 0; i < rom.size(); ++i) {
+            memory[i] = rom[i];
+        }
+    }
 };
 

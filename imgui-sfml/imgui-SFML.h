@@ -6,7 +6,7 @@
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/System/Time.hpp>
 #include <SFML/Window/Joystick.hpp>
-
+#include <vector>
 #include "imgui-SFML_export.h"
 
 namespace sf

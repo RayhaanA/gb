@@ -19,6 +19,7 @@ public:
     ~Display();
     void render();
     void update();
+    void clearWindow() { window.clear(sf::Color(0, 0, 0)); }
     inline bool isOpen() { return window.isOpen(); }
     inline bool pollEvent(sf::Event& event) { return window.pollEvent(event); }
     inline void close() { window.close(); }

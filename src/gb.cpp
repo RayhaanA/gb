@@ -1,44 +1,53 @@
 #define _CRT_SECURE_NO_WARNINGS
-
 #include "imgui.h"
 #include "imgui-SFML.h"
 #include "imgui_memory_editor.h"
 #include "Display.hpp"
 #include "CPU.hpp"
+#include "PPU.hpp"
 #include "util/ParseBinFile.hpp"
+#include "util/Disassembler.hpp"
+#include "ImguiDisassemblyViewer.hpp"
+#include "ImguiRegistersWindow.hpp"
+#include "ImguiPPUStateWindow.hpp"
+#include <fstream>
+#include <chrono>
 
-int main()
-{
-    Resolution r{ 880, 432 };
+void reset(CPU& cpu, MMU& mmu, PPU& ppu, std::vector<uint8_t>& rom) {
+    std::cout << "Resetting\n";
+    cpu.reset();
+    mmu.reset();
+    ppu.reset();
+    cpu.runUntilRomStart();
+}
+
+int main() {
+    std::vector<uint8_t> rom = util::parseRomFile("./roms/01-special.gb");
+    
+    MMU mmu(rom);
+
+    auto disassembly = util::disassemble(mmu.getMemory());
+    
+    Resolution r{ 1080, 560 };
     sf::RenderWindow w(sf::VideoMode(r.width, r.height), "gb");
     Display display(r, std::move(w));
-    
-    std::vector<uint8_t> rom = util::parseRomFile("./roms/dmg_boot.bin");
-    MMU mmu(rom);
-    CPU cpu(mmu);
+
+    Timers timers(&mmu.getMemory());
+    PPU ppu(&mmu.getMemory(), &display);
+    CPU cpu(&mmu, &ppu, &timers);
 
     static MemoryEditor memEdit;
+    
+    static RegistersWindow regWindow;
 
-    mmu.printMemory(0, 255);
+    static PPUStateWindow ppuStateWindow;
 
+    static DisassemblyViewer disassemblyViewer(disassembly);
 
-    util::diassemble(mmu.getMemory());
-    //cpu.printRegisters();
-    //while (cpu.getPC() != 0x64) {
-        //std::cout << "ITERATION " << i << "====== START\n";
-        //cpu.tick();
-       // cpu.printRegisters();
-       // std::cout << "ITERATION " << i << "====== END \n\n";
-    //}
-    //cpu.printRegisters();
+    // Run boot sequence
+    cpu.runUntilRomStart();
 
-    /*gb.callInstruction(0x3C);
-    gb.callInstruction(0x01);
-    gb.callInstruction(0x23);
-    gb.callInstruction(0x09);
-    std::cout << "\n";
-    gb.printRegisters();*/
-
+    cpu.runUntilCompletion();
 
     while (display.isOpen())
     {
@@ -53,13 +62,19 @@ int main()
             else if (event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::N) {
                     cpu.tick();
-                    cpu.printRegisters();
+                }
+                if (event.key.code == sf::Keyboard::R) {
+                    reset(cpu, mmu, ppu, rom);
                 }
             }
         }
-
+        
         display.update();
-        memEdit.DrawWindow("Memory Editor", mmu.getMemory().data(), 0x1000, 0x0000);
+        memEdit.drawWindow("Memory Editor", mmu.getMemory().data(), 0x10000, 0x0000);
+        disassemblyViewer.drawWindow(cpu);
+        //ImGui::ShowDemoWindow();
+        regWindow.drawWindow(cpu);
+        ppuStateWindow.drawWindow(ppu);
         display.render();
     }
 
