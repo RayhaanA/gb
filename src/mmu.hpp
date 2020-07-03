@@ -72,8 +72,18 @@ public:
 
     uint8_t read(uint16_t address, PPU& ppu);
     void write(uint8_t data, uint16_t address, PPU& ppu);
-    uint8_t directRead(uint16_t address) { return memory[address]; }
-    void directWrite(uint8_t data, uint16_t address) { memory[address] = data; }
+    uint8_t directRead(uint16_t address) { 
+        if (address == IF_REG_ADDR) {
+            return memory[address] | 0xE0;
+        }
+        return memory[address]; 
+    }
+    void directWrite(uint8_t data, uint16_t address) {
+        if (address == IF_REG_ADDR) {
+            memory[address] = data | 0xE0;
+        }
+        memory[address] = data;
+    }
 
 
     void reset() {

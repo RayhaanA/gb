@@ -22,7 +22,8 @@ void reset(CPU& cpu, MMU& mmu, PPU& ppu, std::vector<uint8_t>& rom) {
 }
 
 int main() {
-    std::vector<uint8_t> rom = util::parseRomFile("./roms/01-special.gb");
+    // C505 , when AF is 3750 , issue at values at 0xDFFB|0xDFFC in stack : wrong value, check when it writes
+    std::vector<uint8_t> rom = util::parseRomFile("./roms/09-op_r_r.gb");
     
     MMU mmu(rom);
 

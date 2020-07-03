@@ -78,8 +78,8 @@ private:
     void LD(uint16_t address, Register src);
     void LD(uint16_t address, uint8_t data);
     void LD(RegisterPair& dest, SpecialRegister src, int8_t offset);
-    void LDI(Register src, bool setA);
-    void LDD(Register src, bool setA);
+    void LDI(Register& src, bool setA);
+    void LDD(Register& src, bool setA);
     void INC(Register& r);
     void INC(RegisterPair& r);
     void INC(SpecialRegister& r);
@@ -137,11 +137,11 @@ private:
     void SWAP(uint16_t address);
     void SRL(Register& r);
     void SRL(uint16_t address);
-    void BIT(uint8_t position, Register src);
+    void BIT(uint8_t position, Register& src);
     void BIT(uint8_t position, uint16_t address);
-    void RES(uint8_t position, Register src);
+    void RES(uint8_t position, Register& src);
     void RES(uint8_t position, uint16_t address);
-    void SET(uint8_t position, Register src);
+    void SET(uint8_t position, Register& src);
     void SET(uint8_t position, uint16_t address);
    
     inline void updatePreviousRegisterValues() {

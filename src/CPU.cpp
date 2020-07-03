@@ -599,8 +599,7 @@ uint16_t CPU::readU16() {
     return makeU16(low, high);
 }
 
-int8_t CPU::readS8()
-{
+int8_t CPU::readS8() {
     int8_t data = static_cast<int8_t>(readMemoryAndIncrementCycles(PC++.data));
     return data;
 }
@@ -947,8 +946,8 @@ void CPU::RET(bool condition) {
 void CPU::RETI() {
     IME = true;
 
-    uint8_t low = readMemoryAndIncrementCycles(SP++.getLSB());
-    uint8_t high = readMemoryAndIncrementCycles(SP++.getMSB());
+    uint8_t low = readMemoryAndIncrementCycles(SP++.data);
+    uint8_t high = readMemoryAndIncrementCycles(SP++.data);
 
     PC = makeU16(low, high);
     incrementCycleCount();
@@ -1097,15 +1096,16 @@ void CPU::LD(RegisterPair& dest, SpecialRegister src, int8_t offset) {
     incrementCycleCount();
 }
 
-void CPU::LDI(Register src, bool setA) {
-    setA ? A = readMemoryAndIncrementCycles(HL.getData()) : writeMemoryAndIncrementCycles(src.data, HL.getData());
+void CPU::LDI(Register& src, bool setA) {
+    setA ? (A = readMemoryAndIncrementCycles(HL.getData())) : writeMemoryAndIncrementCycles(src.data, HL.getData());
     ++HL;
 }
 
-void CPU::LDD(Register src, bool setA) {
-    setA ? A = readMemoryAndIncrementCycles(HL.getData()) : writeMemoryAndIncrementCycles(src.data, HL.getData());
+void CPU::LDD(Register& src, bool setA) {
+    setA ? (A = readMemoryAndIncrementCycles(HL.getData())) : writeMemoryAndIncrementCycles(src.data, HL.getData());
     --HL;
 }
+
 void CPU::INC(Register& r) {
     if (((r.data & 0xF) + 1) & 0x10) {
         setFlags(H_FLAG);
@@ -1352,12 +1352,16 @@ void CPU::POP(RegisterPair& dest) {
     }
 }
 
+#pragma optimize("", off)
 void CPU::PUSH(RegisterPair& dest) {
+    if (SP.data - 1 == 0xDFFC) {
+        std::cout << "";
+    }
     writeMemoryAndIncrementCycles(dest.getMSB(), --SP.data);
     writeMemoryAndIncrementCycles(dest.getLSB(), --SP.data);
     incrementCycleCount();
 }
-
+#pragma optimize("", on)
 void CPU::RLA() {
     bool carry = A.data & 0x80;
 
@@ -1376,7 +1380,7 @@ void CPU::RLA() {
 }
 
 void CPU::RLCA() {
-    uint8_t carry = A.data & 0x80;
+    bool carry = A.data & 0x80;
 
     A.data <<= 1;
 
@@ -1796,7 +1800,7 @@ void CPU::SRL(uint16_t address) {
     writeMemoryAndIncrementCycles(data, address);
 }
 
-void CPU::BIT(uint8_t position, Register src) {
+void CPU::BIT(uint8_t position, Register& src) {
     setFlags(H_FLAG);
     unsetFlags(N_FLAG);
 
@@ -1822,7 +1826,7 @@ void CPU::BIT(uint8_t position, uint16_t address) {
     }
 }
 
-void CPU::RES(uint8_t position, Register src) {
+void CPU::RES(uint8_t position, Register& src) {
     src.data &= ~(1 << position);
 }
 
@@ -1832,7 +1836,7 @@ void CPU::RES(uint8_t position, uint16_t address) {
     writeMemoryAndIncrementCycles(data, address);
 }
 
-void CPU::SET(uint8_t position, Register src) {
+void CPU::SET(uint8_t position, Register& src) {
     src.data |= 1 << position;
 }
 

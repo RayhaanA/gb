@@ -57,7 +57,6 @@ struct DisassemblyViewer {
                         }
                         cpu.tick();
                     }
-                    reload = true;
                     clicked = 0;
                 }
 

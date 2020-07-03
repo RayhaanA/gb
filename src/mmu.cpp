@@ -131,7 +131,7 @@ void MMU::write(uint8_t data, uint16_t address, PPU& ppu) {
                     wroteZeroToVBLIF = true;
                 }
              
-                memory[address] = data;
+                memory[address] = data | 0xE0;
             }
             else if (address == 0xFF69 || address == 0xFF6B) {
                 if (ppu.getMode() == PPUMode::DATA_TRANSFER) {
