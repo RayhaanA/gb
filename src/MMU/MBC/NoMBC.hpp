@@ -5,15 +5,20 @@
 
 class NoMBC : public MemoryController {
 public:
-    NoMBC(std::vector<uint8_t>& r) : MemoryController(r) {}
+    NoMBC(std::vector<uint8_t>& r, uint8_t romInfo, uint8_t ramInfo) : MemoryController(r, romInfo, ramInfo) {
+        ramEnable = true;
+    }
     ~NoMBC() = default;
 
     uint8_t read(std::vector<uint8_t>& memory, uint16_t address, PPU& ppu) {
         switch (address & 0xF000) {
         case 0x0000: case 0x1000: case 0x2000: case 0x3000: case 0x4000:
         case 0x5000: case 0x6000: case 0x7000: case 0x8000: case 0x9000:
-        case 0xA000: case 0xB000: case 0xC000: case 0xD000:
+        case 0xC000: case 0xD000:
             return memory[address];
+            break;
+        case 0xA000: case 0xB000:
+            return (numRamBanks > 0 && ramEnable) ? memory[address] : UNDEFINED_READ;
             break;
         case 0xE000:
             return memory[address - 0x2000];
@@ -73,15 +78,14 @@ public:
             std::cout << data;
 
         switch (address & 0xF000) {
-        case 0x0000:
-            if (address > 0x100) {
+        case 0x0000: case 0x1000: case 0x2000: case 0x3000: case 0x4000:
+        case 0x5000: case 0x6000: case 0x7000: case 0x8000: case 0x9000:
+            memory[address] = data;
+            break;
+        case 0xA000: case 0xB000:
+            if (numRamBanks > 0 && ramEnable) {
                 memory[address] = data;
             }
-            break;
-        case 0x1000: case 0x2000: case 0x3000: case 0x4000:
-        case 0x5000: case 0x6000: case 0x7000: case 0x8000: case 0x9000:
-        case 0xA000: case 0xB000:
-            memory[address] = data;
             break;
         case 0xC000:
             memory[address] = data;

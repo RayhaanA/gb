@@ -1,7 +1,14 @@
 #pragma once
 #include "inttypes.h"
 
+constexpr std::size_t operator""_KB(unsigned long long v) {
+    return 1024u * v;
+}
+
 const uint8_t UNDEFINED_READ = 0xFF;
+const size_t MEMORY_SIZE = 64_KB;
+const size_t BOOT_ROM_SIZE = 0x100;
+const size_t BASE_ROM_SIZE = 32_KB;
 
 const uint32_t FREQUENCY = 4194304;
 const uint8_t CYCLES_PER_INCREMENT = 4;
@@ -11,6 +18,7 @@ static bool IME = false; // Interrupt Master Enable Flag: Set through op codes
 static bool stopped = false;
 static bool halted = false;
 static bool wroteZeroToVBLIF = false;
+static bool ramEnable = false;
 
 constexpr uint8_t Z_FLAG = 1 << 7;
 constexpr uint8_t N_FLAG = 1 << 6;
@@ -27,6 +35,9 @@ constexpr uint8_t STAT_INTERRUPT_FLAG = 1 << 1;
 constexpr uint8_t V_BLANK_INTERRUPT_FLAG = 1;
 
 const uint16_t CART_HEADER_MBC = 0x147;
+const uint16_t CART_HEADER_ROM_SIZE = 0x148;
+const uint16_t CART_HEADER_RAM_SIZE = 0x149;
+
 const uint16_t V_BLANK_INTERRUPT_VECTOR = 0x40;
 const uint16_t LCDC_INTERRUPT_VECTOR = 0x48;
 const uint16_t TIMER_INTERRUPT_VECTOR = 0x50;

@@ -32,27 +32,31 @@ private:
     std::vector<uint8_t> rom;
 
     std::unique_ptr<MemoryController> mbc;
+    uint8_t romSize = 0;
+
 public:
     MMU() = default;
     explicit MMU(std::vector<uint8_t> r) : rom(r) {
-        bootAreaRemap = std::vector<uint8_t>(0x100);
-        memory = std::vector<uint8_t>(0x10000);
+        bootAreaRemap = std::vector<uint8_t>(BOOT_ROM_SIZE);
+        memory = std::vector<uint8_t>(MEMORY_SIZE);
         std::vector<uint8_t> bootRom = util::parseRomFile("./roms/dmg_boot.bin");
-        for (size_t i = 0; i < bootRom.size(); ++i) {
+        for (size_t i = 0; i < BOOT_ROM_SIZE; ++i) {
             memory[i] = bootRom[i];
         }
-        for (size_t i = 0; i < bootRom.size(); ++i) {
+        for (size_t i = 0; i < BOOT_ROM_SIZE; ++i) {
             bootAreaRemap[i] = rom[i];
         }
-        for (size_t i = bootRom.size(); i < 0x10000; ++i) {
+        for (size_t i = bootRom.size(); i < MEMORY_SIZE; ++i) {
             memory[i] = rom[i];
         }
 
         switch (memory[CART_HEADER_MBC]) {
+        case 0x0:
+            mbc = std::unique_ptr<MemoryController>(new NoMBC(rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
+            break;
         case 0x1:
-            mbc = std::unique_ptr<MemoryController>(new NoMBC(rom));
-        case 0x2:
-            mbc = std::unique_ptr<MemoryController>(new MBC1(rom));
+            mbc = std::unique_ptr<MemoryController>(new MBC1(rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
+            break;
         default:
             break;
         }
@@ -104,16 +108,16 @@ public:
 
     void reset() {
         std::vector<uint8_t> bootRom = util::parseRomFile("./roms/dmg_boot.bin");
-        for (size_t i = 0; i < bootRom.size(); ++i) {
+        for (size_t i = 0; i < BOOT_ROM_SIZE; ++i) {
             memory[i] = bootRom[i];
         }
-        for (size_t i = 0x100; i < rom.size(); ++i) {
+        for (size_t i = BOOT_ROM_SIZE; i < MEMORY_SIZE; ++i) {
             memory[i] = rom[i];
         }
     }
 
     void loadRom(std::vector<uint8_t> rom) {
-        for (size_t i = 0; i < rom.size(); ++i) {
+        for (size_t i = 0; i < MEMORY_SIZE; ++i) {
             memory[i] = rom[i];
         }
     }

@@ -22,7 +22,7 @@ void reset(CPU& cpu, MMU& mmu, PPU& ppu, std::vector<uint8_t>& rom) {
 }
 
 int main() {
-    std::vector<uint8_t> rom = util::parseRomFile("./roms/11-op_a_(hl).gb");
+    std::vector<uint8_t> rom = util::parseRomFile("./roms/cpu_instrs.gb");
     
     MMU mmu(rom);
 

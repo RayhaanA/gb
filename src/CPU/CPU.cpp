@@ -11,7 +11,7 @@ void CPU::tick() {
     else if (halted) {
         if (IME) {
             while (!checkForInterrupts()) {
-                incrementCycleCount();
+                // wait
             }
                 
             handleInterrupts();
@@ -630,6 +630,8 @@ void CPU::handleInterrupts() {
     uint8_t IF = memory->directRead(IF_REG_ADDR);
     uint8_t IE = memory->directRead(IE_REG_ADDR);
 
+    incrementCycleCount();
+
     uint8_t activeInterrupt = 0;
         
     // Find interrupt with highest priority
@@ -660,7 +662,9 @@ void CPU::handleInterrupts() {
 }
 
 bool CPU::checkForInterrupts() {
-    return memory->directRead(IF_REG_ADDR) & memory->directRead(IE_REG_ADDR) & 0x1F;
+    bool interrupt = memory->directRead(IF_REG_ADDR) & memory->directRead(IE_REG_ADDR) & 0x1F;
+    incrementCycleCount();
+    return interrupt;
 }
 
 
