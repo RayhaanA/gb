@@ -1,5 +1,5 @@
 #pragma once
-#include "../src/CPU.hpp"
+#include "../src/CPU/CPU.hpp"
 #include "imgui.h"
 
 struct RegistersWindow {

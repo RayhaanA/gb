@@ -1,4 +1,7 @@
 #pragma once
+#include "inttypes.h"
+
+const uint8_t UNDEFINED_READ = 0xFF;
 
 const uint32_t FREQUENCY = 4194304;
 const uint8_t CYCLES_PER_INCREMENT = 4;
@@ -23,6 +26,7 @@ constexpr uint8_t TIMER_INTERRUPT_FLAG = 1 << 2;
 constexpr uint8_t STAT_INTERRUPT_FLAG = 1 << 1;
 constexpr uint8_t V_BLANK_INTERRUPT_FLAG = 1;
 
+const uint16_t CART_HEADER_MBC = 0x147;
 const uint16_t V_BLANK_INTERRUPT_VECTOR = 0x40;
 const uint16_t LCDC_INTERRUPT_VECTOR = 0x48;
 const uint16_t TIMER_INTERRUPT_VECTOR = 0x50;

@@ -2,9 +2,9 @@
 #include "imgui.h"
 #include "imgui-SFML.h"
 #include "imgui_memory_editor.h"
-#include "Display.hpp"
-#include "CPU.hpp"
-#include "PPU.hpp"
+#include "PPU/Display.hpp"
+#include "CPU/CPU.hpp"
+#include "PPU/PPU.hpp"
 #include "util/ParseBinFile.hpp"
 #include "util/Disassembler.hpp"
 #include "ImguiDisassemblyViewer.hpp"
@@ -22,8 +22,7 @@ void reset(CPU& cpu, MMU& mmu, PPU& ppu, std::vector<uint8_t>& rom) {
 }
 
 int main() {
-    // C505 , when AF is 3750 , issue at values at 0xDFFB|0xDFFC in stack : wrong value, check when it writes
-    std::vector<uint8_t> rom = util::parseRomFile("./roms/09-op_r_r.gb");
+    std::vector<uint8_t> rom = util::parseRomFile("./roms/11-op_a_(hl).gb");
     
     MMU mmu(rom);
 

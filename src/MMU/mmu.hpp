@@ -3,9 +3,11 @@
 #include <unordered_map>
 #include <iostream>
 #include <iomanip>
-#include "PPU.hpp"
-#include "./util/Logging.hpp"
-#include "./util/ParseBinFile.hpp"
+#include "../PPU/PPU.hpp"
+#include "../util/Logging.hpp"
+#include "../util/ParseBinFile.hpp"
+#include "MBC/NoMBC.hpp"
+#include "MBC/MBC1.hpp"
 
 class MMU
 {
@@ -28,6 +30,8 @@ private:
     std::vector<uint8_t> bootAreaRemap;
     std::vector<uint8_t> memory;
     std::vector<uint8_t> rom;
+
+    std::unique_ptr<MemoryController> mbc;
 public:
     MMU() = default;
     explicit MMU(std::vector<uint8_t> r) : rom(r) {
@@ -40,11 +44,23 @@ public:
         for (size_t i = 0; i < bootRom.size(); ++i) {
             bootAreaRemap[i] = rom[i];
         }
-        for (size_t i = 0x100; i < rom.size(); ++i) {
+        for (size_t i = bootRom.size(); i < 0x10000; ++i) {
             memory[i] = rom[i];
         }
+
+        switch (memory[CART_HEADER_MBC]) {
+        case 0x1:
+            mbc = std::unique_ptr<MemoryController>(new NoMBC(rom));
+        case 0x2:
+            mbc = std::unique_ptr<MemoryController>(new MBC1(rom));
+        default:
+            break;
+        }
+
     }
-    ~MMU() = default;
+    ~MMU() {
+        mbc.reset();
+    }
 
     void printMemory(size_t start, size_t end) {
         if (end > memory.size()) {

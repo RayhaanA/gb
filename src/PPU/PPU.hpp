@@ -2,7 +2,7 @@
 #include <memory>
 #include <unordered_map>
 #include "Display.hpp"
-#include "Globals.hpp"
+#include "../Globals.hpp"
 
 struct ControlRegister {
     bool displayEnable = false;

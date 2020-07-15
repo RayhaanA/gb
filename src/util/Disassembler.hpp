@@ -3,7 +3,7 @@
 #include <iostream>
 #include <iomanip>
 #include <unordered_map>
-#include "../Opcodes.hpp"
+#include "../CPU/Opcodes.hpp"
 #include "Logging.hpp"
 
 namespace util {

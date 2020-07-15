@@ -1,5 +1,5 @@
 #pragma once
-#include "Globals.hpp"
+#include "../Globals.hpp"
 
 class Timers {
     std::unique_ptr<uint8_t> divHigh; // div high holds the actual value of the timer

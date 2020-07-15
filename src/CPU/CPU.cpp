@@ -1352,16 +1352,12 @@ void CPU::POP(RegisterPair& dest) {
     }
 }
 
-#pragma optimize("", off)
 void CPU::PUSH(RegisterPair& dest) {
-    if (SP.data - 1 == 0xDFFC) {
-        std::cout << "";
-    }
     writeMemoryAndIncrementCycles(dest.getMSB(), --SP.data);
     writeMemoryAndIncrementCycles(dest.getLSB(), --SP.data);
     incrementCycleCount();
 }
-#pragma optimize("", on)
+
 void CPU::RLA() {
     bool carry = A.data & 0x80;
 
@@ -1384,7 +1380,7 @@ void CPU::RLCA() {
 
     A.data <<= 1;
 
-    A.data |= carry;
+    A.data |= static_cast<uint8_t>(carry);
 
     if (carry) {
         setFlags(C_FLAG);

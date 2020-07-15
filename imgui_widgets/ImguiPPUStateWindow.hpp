@@ -1,6 +1,6 @@
 #pragma once
 #include "imgui.h"
-#include "../src/PPU.hpp"
+#include "../src/PPU/PPU.hpp"
 
 struct PPUStateWindow {
     PPUStateWindow() = default;

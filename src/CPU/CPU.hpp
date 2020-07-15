@@ -1,7 +1,7 @@
 #pragma once
 #include "Registers.hpp"
-#include "PPU.hpp"
-#include "MMU.hpp"
+#include "../PPU/PPU.hpp"
+#include "../MMU/MMU.hpp"
 #include "Timers.hpp"
 #include <iostream>
 

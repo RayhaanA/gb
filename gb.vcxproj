@@ -23,13 +23,20 @@
     <ClInclude Include="imgui_widgets\ImguiPPUStateWindow.hpp" />
     <ClInclude Include="imgui_widgets\ImguiRegistersWindow.hpp" />
     <ClInclude Include="imgui_widgets\imgui_memory_editor.h" />
-    <ClInclude Include="src\Display.hpp" />
+    <ClInclude Include="src\CPU\CPU.hpp" />
+    <ClInclude Include="src\CPU\Opcodes.hpp" />
+    <ClInclude Include="src\CPU\Registers.hpp" />
+    <ClInclude Include="src\CPU\Timers.hpp" />
     <ClInclude Include="src\Globals.hpp" />
-    <ClInclude Include="src\MMU.hpp" />
-    <ClInclude Include="src\Opcodes.hpp" />
-    <ClInclude Include="src\PPU.hpp" />
-    <ClInclude Include="src\Registers.hpp" />
-    <ClInclude Include="src\Timers.hpp" />
+    <ClInclude Include="src\MBC\MemoryController.hpp" />
+    <ClInclude Include="src\MBC\NoMBC.hpp" />
+    <ClInclude Include="src\MMU\MBC\MBC1.hpp" />
+    <ClInclude Include="src\MMU\MBC\MemoryController.hpp" />
+    <ClInclude Include="src\MMU\MBC\NoMBC.hpp" />
+    <ClInclude Include="src\MMU\mmu.hpp" />
+    <ClInclude Include="src\MMU\ROM.hpp" />
+    <ClInclude Include="src\PPU\Display.hpp" />
+    <ClInclude Include="src\PPU\PPU.hpp" />
     <ClInclude Include="src\util\Disassembler.hpp" />
     <ClInclude Include="src\util\Logging.hpp" />
     <ClInclude Include="src\util\ParseBinFile.hpp" />
@@ -40,20 +47,11 @@
     <ClCompile Include="imgui\imgui_demo.cpp" />
     <ClCompile Include="imgui\imgui_draw.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
-    <ClCompile Include="src\CPU.cpp">
-      <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ShowIncludes>
-    </ClCompile>
-    <ClCompile Include="src\PPU.cpp" />
-    <ClInclude Include="src\CPU.hpp" />
-    <ClCompile Include="src\Display.cpp">
-      <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ShowIncludes>
-    </ClCompile>
-    <ClCompile Include="src\gb.cpp">
-      <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ShowIncludes>
-    </ClCompile>
-    <ClCompile Include="src\MMU.cpp">
-      <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ShowIncludes>
-    </ClCompile>
+    <ClCompile Include="src\CPU\CPU.cpp" />
+    <ClCompile Include="src\gb.cpp" />
+    <ClCompile Include="src\MMU\mmu.cpp" />
+    <ClCompile Include="src\PPU\display.cpp" />
+    <ClCompile Include="src\PPU\PPU.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

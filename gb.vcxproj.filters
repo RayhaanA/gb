@@ -15,25 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Display.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\MMU.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Registers.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Opcodes.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\util\ParseBinFile.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\util\Disassembler.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\CPU.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\util\Logging.hpp">
@@ -48,32 +33,53 @@
     <ClInclude Include="imgui_widgets\ImguiRegistersWindow.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\PPU.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="imgui_widgets\ImguiPPUStateWindow.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Globals.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Timers.hpp">
+    <ClInclude Include="src\MBC\MemoryController.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\MBC\NoMBC.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CPU\CPU.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CPU\Opcodes.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CPU\Registers.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CPU\Timers.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\MMU\mmu.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\MMU\ROM.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PPU\Display.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PPU\PPU.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\MMU\MBC\NoMBC.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\MMU\MBC\MemoryController.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\MMU\MBC\MBC1.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Display.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\gb.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\MMU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\CPU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="imgui-sfml\imgui-SFML.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -89,7 +95,19 @@
     <ClCompile Include="imgui\imgui_demo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\PPU.cpp">
+    <ClCompile Include="src\CPU\CPU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\MMU\mmu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PPU\display.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PPU\PPU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gb.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
