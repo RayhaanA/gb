@@ -49,22 +49,22 @@ struct PPUStateWindow {
         ImGui::Text("%X", ppu.getSTAT()); ImGui::NextColumn();
 
         ImGui::Text("LY"); ImGui::NextColumn(); ImGui::Separator();
-        ImGui::Text("%X", ppu.getLY()); ImGui::NextColumn();
+        ImGui::Text("%d", ppu.getLY()); ImGui::NextColumn();
 
         ImGui::Text("LYC"); ImGui::NextColumn(); ImGui::Separator();
-        ImGui::Text("%X", ppu.getLYC()); ImGui::NextColumn();
+        ImGui::Text("%d", ppu.getLYC()); ImGui::NextColumn();
 
         ImGui::Text("WX"); ImGui::NextColumn(); ImGui::Separator();
-        ImGui::Text("%X", ppu.getWX()); ImGui::NextColumn();
+        ImGui::Text("%d", ppu.getWX()); ImGui::NextColumn();
 
         ImGui::Text("WY"); ImGui::NextColumn(); ImGui::Separator();
-        ImGui::Text("%X", ppu.getWY()); ImGui::NextColumn();
+        ImGui::Text("%d", ppu.getWY()); ImGui::NextColumn();
 
         ImGui::Text("SCY"); ImGui::NextColumn(); ImGui::Separator();
-        ImGui::Text("%X", ppu.getSCY()); ImGui::NextColumn();
+        ImGui::Text("%d", ppu.getSCY()); ImGui::NextColumn();
 
         ImGui::Text("SCX"); ImGui::NextColumn(); ImGui::Separator();
-        ImGui::Text("%X", ppu.getSCX()); ImGui::NextColumn();
+        ImGui::Text("%d", ppu.getSCX()); ImGui::NextColumn();
 
         ImGui::Separator();
         ImGui::End();

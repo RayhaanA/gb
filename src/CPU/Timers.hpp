@@ -8,10 +8,10 @@ class Timers {
     std::unique_ptr<uint8_t> tma;
     std::unique_ptr<uint8_t> tac;
 
-    uint32_t divCycleCount = 0;
-    uint32_t timerCycleCount = 0;
-    const std::vector<uint32_t> timaIncrementRate = { FREQUENCY / 1024, FREQUENCY / 16, FREQUENCY / 64, FREQUENCY / 256 };
-    const uint32_t divIncrementRate = FREQUENCY / 256;
+    uint16_t divCounter = 0;
+    uint32_t timerCounter = 0;
+    const std::vector<uint32_t> timaIncrementRate = { FREQUENCY / 4096, FREQUENCY / 262144, FREQUENCY / 65536, FREQUENCY / 16386 };
+    const uint32_t divOverflowPeriod = FREQUENCY / 64;
 
     std::unique_ptr<std::vector<uint8_t>> memory;
 
@@ -35,10 +35,21 @@ public:
         memory.release();
     }
 
+    void incrementDIV() {
+        if (resetSysCounter) {
+            divCounter = 0;
+            resetSysCounter = false;
+        }
+
+        divCounter += CYCLES_PER_INCREMENT;
+        *divLow = divCounter & 0xFF;
+        *divHigh = (divCounter & 0xFF00) >> 8;
+    }
+
     // Handle DIV and TIMA register functioning; todo: bunch of bugs related to this in gb system, does it even work regardless of bugs?
     void incrementTIMA() {
         if (*tac & TIMER_ENABLE_BIT) {
-            if (timerCycleCount == timaIncrementRate[*tac & TIMER_INPUT_CLOCK_BITS]) {
+            if (timerCounter >= timaIncrementRate[*tac & TIMER_INPUT_CLOCK_BITS]) {
                 if (*tima == std::numeric_limits<uint8_t>::max()) {
                     *tima = 0;
                     timaInterruptRequest = true;
@@ -46,18 +57,14 @@ public:
                 else {
                     *tima = *tima + 1;
                 }
-                timerCycleCount = 0;
+                timerCounter = 0;
             }
-            timerCycleCount += CYCLES_PER_INCREMENT;
+            timerCounter += CYCLES_PER_INCREMENT;
         }
     }
 
     void incrementTimers() {
-        if (divCycleCount > divIncrementRate) {
-            *divHigh = *divHigh + 1;
-            divCycleCount = 0;
-        }
-        divCycleCount += CYCLES_PER_INCREMENT;
+        incrementDIV();
         incrementTIMA();
     }
 };

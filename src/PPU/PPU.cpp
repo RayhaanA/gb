@@ -31,6 +31,13 @@ void PPU::incrementLY() {
     }
 }
 
+void PPU::setDisplayBlank() {
+    for (size_t i = 0; i < frameBuffer.size(); ++i) {
+        frameBuffer[i] = 255;
+    }
+    frame.update(frameBuffer.data());
+}
+
 void PPU::tick() {
     switch (mode) {
     case PPUMode::H_BLANK:
@@ -57,6 +64,7 @@ void PPU::tick() {
                 }
 
                 // push frame buffer to display here
+                pushFrame();
             }
             else {
                 incrementLY();
@@ -89,7 +97,28 @@ void PPU::tick() {
         }
         break;
     case PPUMode::DATA_TRANSFER:
-        if (modeCycles >= DATA_TRANSFER_CYCLES) {
+        if (modeCycles == 0) {
+            bgFifo = {};
+            oamFifo = {};
+        }
+        else if (modeCycles < DATA_TRANSFER_CYCLES) {
+            switch (pixelFetchState) {
+            case PixelFetchState::GET_TILE:
+                break;
+            case PixelFetchState::GET_TILE_DATA_LOW:
+                break;
+            case PixelFetchState::GET_TILE_DATA_HIGH:
+                break;
+            case PixelFetchState::SLEEP:
+                break;
+            case PixelFetchState::PUSH:
+                break;
+            default:
+                std::cout << "Unhandled pixel fetcher state " << static_cast<uint16_t>(pixelFetchState) << std::endl;
+                break;
+            }
+        }
+        else if (modeCycles >= DATA_TRANSFER_CYCLES) {
             modeCycles = 0;
             mode = PPUMode::H_BLANK;
 
@@ -98,16 +127,16 @@ void PPU::tick() {
                 requestInterrupt(STAT_INTERRUPT_FLAG);
             }
 
-            // write a line to frame buffer here?
+            // write a line to frame buffer here
+            drawScanLine();
         }
         break;
     default:
         break;
     }
-
 }
 
-void PPU::updateRegistersValues(uint16_t address) {
+void PPU::writeRegistersValues(uint16_t address) {
     uint8_t data = (*memory)[address];
     switch (address) {
     case CONTROL_REG_ADDR:
@@ -115,6 +144,7 @@ void PPU::updateRegistersValues(uint16_t address) {
             cycles = 0;
             modeCycles = 0;
             mode = PPUMode::H_BLANK;
+            ly = 0;
         }
         controlRegister.displayEnable = data & 0x80;
         controlRegister.windowTileMapSelect = data & 0x40;
@@ -167,7 +197,7 @@ void PPU::updateRegistersValues(uint16_t address) {
         wy = (*memory)[address];
         break;
     case WX_REG_ADDR:
-        wx = (*memory)[address] - 7;
+        wx = (*memory)[address] - WX_OFFSET;
         break;
     default:
         break;
@@ -177,21 +207,21 @@ void PPU::updateRegistersValues(uint16_t address) {
 uint8_t PPU::readRegisterValues(uint16_t address) {
     switch (address) {
     case CONTROL_REG_ADDR:
-        (*memory)[CONTROL_REG_ADDR] = (controlRegister.displayEnable << 7) |
-            (controlRegister.windowTileMapSelect << 6) |
-            (controlRegister.windowDisplayEnable << 5) |
-            (controlRegister.bgAndWindowTileDataSelect << 4) |
-            (controlRegister.bgTileMapDisplaySelect << 3) |
-            (controlRegister.objectSize << 2) |
-            (controlRegister.objectDisplayEnable << 1) |
+        (*memory)[CONTROL_REG_ADDR] = (static_cast<uint8_t>(controlRegister.displayEnable) << 7) |
+            (static_cast<uint8_t>(controlRegister.windowTileMapSelect) << 6) |
+            (static_cast<uint8_t>(controlRegister.windowDisplayEnable) << 5) |
+            (static_cast<uint8_t>(controlRegister.bgAndWindowTileDataSelect) << 4) |
+            (static_cast<uint8_t>(controlRegister.bgTileMapDisplaySelect) << 3) |
+            (static_cast<uint8_t>(controlRegister.objectSize) << 2) |
+            (static_cast<uint8_t>(controlRegister.objectDisplayEnable) << 1) |
             static_cast<uint8_t>(controlRegister.bgWindowDisplayPriority);
         break;
     case STATUS_REG_ADDR:
-        (*memory)[STATUS_REG_ADDR] = (statusRegister.lyCoincidenceInterrupt << 6) |
-            (statusRegister.oamInterrupt << 5) |
-            (statusRegister.vBlankInterrupt << 4) |
-            (statusRegister.hBlankInterrupt << 3) |
-            (statusRegister.coincideFlag << 2) |
+        (*memory)[STATUS_REG_ADDR] = (static_cast<uint8_t>(statusRegister.lyCoincidenceInterrupt) << 6) |
+            (static_cast<uint8_t>(statusRegister.oamInterrupt) << 5) |
+            (static_cast<uint8_t>(statusRegister.vBlankInterrupt) << 4) |
+            (static_cast<uint8_t>(statusRegister.hBlankInterrupt) << 3) |
+            (static_cast<uint8_t>(statusRegister.coincideFlag) << 2) |
             static_cast<uint8_t>(mode);
         break;
     case SCY_REG_ADDR:
@@ -228,7 +258,7 @@ uint8_t PPU::readRegisterValues(uint16_t address) {
         (*memory)[WY_REG_ADDR] = wy;
         break;
     case WX_REG_ADDR:
-        (*memory)[WX_REG_ADDR] = wx + 7;
+        (*memory)[WX_REG_ADDR] = wx + WX_OFFSET;
         break;
     default:
         break;

@@ -22,7 +22,7 @@ void reset(CPU& cpu, MMU& mmu, PPU& ppu, std::vector<uint8_t>& rom) {
 }
 
 int main() {
-    std::vector<uint8_t> rom = util::parseRomFile("./roms/cpu_instrs.gb");
+    std::vector<uint8_t> rom = util::parseRomFile("./roms/blargg_cpu_instrs/cpu_instrs.gb");
     
     MMU mmu(rom);
 
@@ -30,7 +30,7 @@ int main() {
     
     Resolution r{ 1080, 560 };
     sf::RenderWindow w(sf::VideoMode(r.width, r.height), "gb");
-    Display display(r, std::move(w));
+    Display display(r, &w);
 
     Timers timers(&mmu.getMemory());
     PPU ppu(&mmu.getMemory(), &display);
@@ -47,7 +47,7 @@ int main() {
     // Run boot sequence
     cpu.runUntilRomStart();
 
-    cpu.runUntilCompletion();
+    //cpu.runUntilCompletion();
 
     while (display.isOpen())
     {
@@ -70,12 +70,13 @@ int main() {
         }
         
         display.update();
+        cpu.runOneFrame();
         memEdit.drawWindow("Memory Editor", mmu.getMemory().data(), 0x10000, 0x0000);
         disassemblyViewer.drawWindow(cpu);
         //ImGui::ShowDemoWindow();
         regWindow.drawWindow(cpu);
         ppuStateWindow.drawWindow(ppu);
-        display.render();
+        display.render(ppu.getFrame());
     }
 
     return EXIT_SUCCESS;

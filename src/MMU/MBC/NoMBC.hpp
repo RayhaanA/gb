@@ -5,7 +5,7 @@
 
 class NoMBC : public MemoryController {
 public:
-    NoMBC(std::vector<uint8_t>& r, uint8_t romInfo, uint8_t ramInfo) : MemoryController(r, romInfo, ramInfo) {
+    NoMBC(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo) : MemoryController(r, romInfo, ramInfo) {
         ramEnable = true;
     }
     ~NoMBC() = default;
@@ -50,15 +50,21 @@ public:
                 if (address == IF_REG_ADDR) {
                     return memory[address] | 0xE0;
                 }
-                else if (address == 0xFF69 || address == 0xFF6B) {
+                // GBC Only?
+                /*else if (address == 0xFF69 || address == 0xFF6B) {
                     if (ppu.getMode() == PPUMode::DATA_TRANSFER) {
                         return UNDEFINED_READ;
                     }
-                }
+                }*/
                 else {
                     switch (address & 0xF0) {
                     case 0x40:
-                        return ppu.readRegisterValues(address);
+                        if (address == DMA_TRANSFER_ADDR || address > 0xFF4B) {
+                            return memory[address];
+                        }
+                        else {
+                            return ppu.readRegisterValues(address);
+                        }
                         break;
                     default:
                         return memory[address];
@@ -132,6 +138,7 @@ public:
                 }
                 else if (address == DIV_REG_ADDR) {
                     // Reset div register if tried to write to
+                    memory[address - 1] = 0;
                     memory[address] = 0;
                 }
                 else if (address == IF_REG_ADDR) {
@@ -152,9 +159,16 @@ public:
                         if (address == LY_REG_ADDR && !ppu.getDisplayEnabled()) {
 
                         }
+                        else if (address == DMA_TRANSFER_ADDR) {
+                            dmaSourceAddress = data << 8;
+                            dmaActive = true;
+                        }
+                        else if (address > 0xFF4B) {
+                            memory[address] = data;
+                        }
                         else {
                             memory[address] = data;
-                            ppu.updateRegistersValues(address);
+                            ppu.writeRegistersValues(address);
                         }
                         break;
                     case 0x50: case 0x60: case 0x70:

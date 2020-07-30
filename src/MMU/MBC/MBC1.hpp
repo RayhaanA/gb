@@ -7,7 +7,7 @@ class MBC1 : public MemoryController {
 private:
     bool defaultMode = true;
 public:
-    MBC1(std::vector<uint8_t>& r, uint8_t romInfo, uint8_t ramInfo) : MemoryController(r, romInfo, ramInfo) {
+    MBC1(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo) : MemoryController(r, romInfo, ramInfo) {
         ramEnable = false;
     }
     ~MBC1() = default;
@@ -19,7 +19,7 @@ public:
             return memory[address];
             break;
         case 0x4000: case 0x5000: case 0x6000: case 0x7000:
-            return rom[address + romSize / numRomBanks * static_cast<size_t>((romBank % numRomBanks)- 1)];
+            return (*rom)[address + romSize / numRomBanks * static_cast<size_t>((romBank % numRomBanks)- 1)];
         case 0xA000: case 0xB000:
             if (numRamBanks > 0 && ramEnable) {
                 // choose bank 
@@ -61,15 +61,21 @@ public:
                 if (address == IF_REG_ADDR) {
                     return memory[address] | 0xE0;
                 }
-                else if (address == 0xFF69 || address == 0xFF6B) {
+                // GBC Only?
+                /*else if (address == 0xFF69 || address == 0xFF6B) {
                     if (ppu.getMode() == PPUMode::DATA_TRANSFER) {
                         return UNDEFINED_READ;
                     }
-                }
+                }*/
                 else {
                     switch (address & 0xF0) {
                     case 0x40:
-                        return ppu.readRegisterValues(address);
+                        if (address == DMA_TRANSFER_ADDR || address > 0xFF4B) {
+                            return memory[address];
+                        }
+                        else {
+                            return ppu.readRegisterValues(address);
+                        }
                         break;
                     default:
                         return memory[address];
@@ -87,7 +93,6 @@ public:
     void write(std::vector<uint8_t>& memory, uint8_t data, uint16_t address, PPU& ppu) {
         if (address == 0xFF01)
             std::cout << data;
-
         switch (address & 0xF000) {
         case 0x0000: case 0x1000:
             if ((data & 0xF) == 0xA) {
@@ -176,6 +181,8 @@ public:
                 }
                 else if (address == DIV_REG_ADDR) {
                     // Reset div register if tried to write to
+                    resetSysCounter = true;
+                    memory[address - 1] = 0;
                     memory[address] = 0;
                 }
                 else if (address == IF_REG_ADDR) {
@@ -194,11 +201,18 @@ public:
                     switch (address & 0xF0) {
                     case 0x40:
                         if (address == LY_REG_ADDR && !ppu.getDisplayEnabled()) {
-
+                            break;
+                        }
+                        else if (address == DMA_TRANSFER_ADDR) {
+                            dmaSourceAddress = data << 8;
+                            dmaActive = true;
+                        }
+                        else if (address > 0xFF4B) {
+                            memory[address] = data;
                         }
                         else {
                             memory[address] = data;
-                            ppu.updateRegistersValues(address);
+                            ppu.writeRegistersValues(address);
                         }
                         break;
                     case 0x50: case 0x60: case 0x70:

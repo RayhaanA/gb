@@ -39,23 +39,22 @@ public:
     explicit MMU(std::vector<uint8_t> r) : rom(r) {
         bootAreaRemap = std::vector<uint8_t>(BOOT_ROM_SIZE);
         memory = std::vector<uint8_t>(MEMORY_SIZE);
-        std::vector<uint8_t> bootRom = util::parseRomFile("./roms/dmg_boot.bin");
         for (size_t i = 0; i < BOOT_ROM_SIZE; ++i) {
-            memory[i] = bootRom[i];
+            memory[i] = BOOT_ROM[i];
         }
         for (size_t i = 0; i < BOOT_ROM_SIZE; ++i) {
             bootAreaRemap[i] = rom[i];
         }
-        for (size_t i = bootRom.size(); i < MEMORY_SIZE; ++i) {
+        for (size_t i = BOOT_ROM_SIZE; i < MEMORY_SIZE; ++i) {
             memory[i] = rom[i];
         }
 
         switch (memory[CART_HEADER_MBC]) {
         case 0x0:
-            mbc = std::unique_ptr<MemoryController>(new NoMBC(rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
+            mbc = std::unique_ptr<MemoryController>(new NoMBC(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
             break;
         case 0x1:
-            mbc = std::unique_ptr<MemoryController>(new MBC1(rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
+            mbc = std::unique_ptr<MemoryController>(new MBC1(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
             break;
         default:
             break;
@@ -107,9 +106,8 @@ public:
 
 
     void reset() {
-        std::vector<uint8_t> bootRom = util::parseRomFile("./roms/dmg_boot.bin");
         for (size_t i = 0; i < BOOT_ROM_SIZE; ++i) {
-            memory[i] = bootRom[i];
+            memory[i] = BOOT_ROM[i];
         }
         for (size_t i = BOOT_ROM_SIZE; i < MEMORY_SIZE; ++i) {
             memory[i] = rom[i];
@@ -120,6 +118,10 @@ public:
         for (size_t i = 0; i < MEMORY_SIZE; ++i) {
             memory[i] = rom[i];
         }
+    }
+
+    bool addressInHRAM(uint16_t address) {
+        return (address >= 0xFF80 && address <= 0xFFFE);
     }
 };
 

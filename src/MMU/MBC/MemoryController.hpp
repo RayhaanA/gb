@@ -3,7 +3,7 @@
 
 class MemoryController {
 protected:
-    std::vector<uint8_t> rom;
+    std::unique_ptr<std::vector<uint8_t>> rom;
     size_t romSize = 0;
     uint16_t numRomBanks = 0;
     size_t ramSize = 0;
@@ -11,7 +11,8 @@ protected:
     uint16_t romBank = 1;
     uint16_t ramBank = 0;
 public:
-    explicit MemoryController(std::vector<uint8_t>& r, uint8_t romInfo, uint8_t ramInfo) : rom(r) {
+    explicit MemoryController(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo) {
+        rom = std::unique_ptr<std::vector<uint8_t>>(r);
         romSize = BASE_ROM_SIZE << romInfo;
         numRomBanks = 2 << romInfo;
 
@@ -36,6 +37,9 @@ public:
             numRamBanks = 8;
             break;
         }
+    }
+    ~MemoryController() {
+        rom.release();
     }
     virtual uint8_t read(std::vector<uint8_t>& memory, uint16_t address, PPU& ppu) = 0;
     virtual void write(std::vector<uint8_t>& memory, uint8_t data, uint16_t address, PPU& ppu) = 0;

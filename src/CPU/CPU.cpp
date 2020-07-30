@@ -1,5 +1,7 @@
 #include "CPU.hpp"
 
+// Core functionality
+
 void CPU::tick() {
     updatePreviousRegisterValues();
 
@@ -20,7 +22,7 @@ void CPU::tick() {
         else {
             if (!checkForInterrupts()) {
                 while (!checkForInterrupts()) {
-                    incrementCycleCount();
+                    // wait
                 }
                
                 halted = false;
@@ -58,6 +60,131 @@ void CPU::tick() {
         interruptHandledThisTick = false;
     }
 }
+
+void CPU::incrementCycleCount() {
+    cycles += CYCLES_PER_INCREMENT;
+
+    if (enableInterruptsNextCycle) {
+        IME = true;
+        enableInterruptsNextCycle = false;
+    }
+
+    if (timaInterruptRequest) {
+        requestInterrupt(TIMER_INTERRUPT_FLAG);
+        memory->directWrite(memory->directRead(TMA_REG_ADDR), TIMA_REG_ADDR);
+        timaInterruptRequest = false;
+    }
+
+    timers->incrementTimers();
+
+    if (dmaActive) {
+        dmaCopyByte();
+    }
+
+    if (cycles > FREQUENCY) {
+        cycles -= FREQUENCY;
+    }
+
+    ppu->incrementCycleCount();
+
+    frameCycles += CYCLES_PER_INCREMENT;
+
+    if (frameCycles > CYCLES_PER_FRAME) {
+        frameDone = true;
+        frameCycles -= CYCLES_PER_FRAME;
+    }
+}
+
+
+void CPU::handleInterrupts() {
+    interruptHandledThisTick = true;
+
+    uint8_t IF = memory->directRead(IF_REG_ADDR);
+    uint8_t IE = memory->directRead(IE_REG_ADDR);
+
+    incrementCycleCount();
+
+    uint8_t activeInterrupt = 0;
+
+    // Find interrupt with highest priority
+    for (uint8_t i = 0; i < 5; ++i) {
+        if (IF & (1 << i) && IE & (1 << i)) {
+            activeInterrupt = i;
+            break;
+        }
+    }
+
+    // Clear corresponding IF bit
+    memory->directWrite((IF & ~(1 << activeInterrupt)), IF_REG_ADDR);
+
+    // Begin ISR
+    // Start with 2 NOPs
+    incrementCycleCount();
+    incrementCycleCount();
+
+    // Push PC onto stack
+    writeMemoryAndIncrementCycles(PC.getMSB(), --SP.data);
+    writeMemoryAndIncrementCycles(PC.getLSB(), --SP.data);
+
+    // Jump to interrupt vector
+    PC.data = INTERRUPT_VECTORS[activeInterrupt];
+
+    // Reset IME
+    IME = false;
+}
+
+//  Utilities
+
+uint16_t CPU::makeU16(uint8_t lsb, uint8_t msb) {
+    uint16_t temp = lsb;
+    temp |= msb << 8;
+
+    return temp;
+}
+
+uint8_t CPU::readU8() {
+    uint8_t data = readMemoryAndIncrementCycles(PC++.data);
+    return data;
+}
+
+uint16_t CPU::readU16() {
+    uint8_t low = readU8();
+    uint8_t high = readU8();
+    return makeU16(low, high);
+}
+
+int8_t CPU::readS8() {
+    int8_t data = static_cast<int8_t>(readMemoryAndIncrementCycles(PC++.data));
+    return data;
+}
+
+void CPU::setFlags(uint8_t value) {
+    F.data |= value;
+}
+
+void CPU::unsetFlags(uint8_t value) {
+    F.data &= ~value;
+}
+
+bool CPU::checkFlags(uint8_t value) {
+    return F.data & value;
+}
+
+void CPU::requestInterrupt(uint8_t data) {
+    memory->getMemory()[IF_REG_ADDR] |= data & 0x1F;
+}
+
+void CPU::clearInterruptRequest(uint8_t data) {
+    memory->getMemory()[IF_REG_ADDR] &= ~data;
+}
+
+bool CPU::checkForInterrupts() {
+    bool interrupt = memory->directRead(IF_REG_ADDR) & memory->directRead(IE_REG_ADDR) & 0x1F;
+    incrementCycleCount();
+    return interrupt;
+}
+
+// Jump table
 
 void CPU::callInstruction(uint16_t instruction) {
     switch (instruction) {
@@ -579,94 +706,6 @@ void CPU::callInstructionCB(uint16_t instruction) {
         break;
     }
 }
-
-//  Utilities
-uint16_t CPU::makeU16(uint8_t lsb, uint8_t msb) {
-    uint16_t temp = lsb;
-    temp |= msb << 8;
-
-    return temp;
-}
-
-uint8_t CPU::readU8() {
-    uint8_t data = readMemoryAndIncrementCycles(PC++.data);
-    return data;
-}
-
-uint16_t CPU::readU16() {
-    uint8_t low = readU8();
-    uint8_t high = readU8();
-    return makeU16(low, high);
-}
-
-int8_t CPU::readS8() {
-    int8_t data = static_cast<int8_t>(readMemoryAndIncrementCycles(PC++.data));
-    return data;
-}
-
-void CPU::setFlags(uint8_t value) {
-    F.data |= value;
-}
-
-void CPU::unsetFlags(uint8_t value) {
-    F.data &= ~value;
-}
-
-bool CPU::checkFlags(uint8_t value) {
-    return F.data & value;
-}
-
-void CPU::requestInterrupt(uint8_t data) {
-    memory->getMemory()[IF_REG_ADDR] |= data & 0x1F;
-}
-
-void CPU::clearInterruptRequest(uint8_t data) {
-    memory->getMemory()[IF_REG_ADDR] &= ~data;
-}
-
-void CPU::handleInterrupts() {
-    interruptHandledThisTick = true;
-
-    uint8_t IF = memory->directRead(IF_REG_ADDR);
-    uint8_t IE = memory->directRead(IE_REG_ADDR);
-
-    incrementCycleCount();
-
-    uint8_t activeInterrupt = 0;
-        
-    // Find interrupt with highest priority
-    for (uint8_t i = 0; i < 5; ++i) {
-        if (IF & (1 << i) && IE & (1 << i)) {
-            activeInterrupt = i;
-            break;
-        }
-    }
-
-    // Clear corresponding IF bit
-    memory->directWrite((IF & ~(1 << activeInterrupt)), IF_REG_ADDR);
-
-    // Begin ISR
-    // Start with 2 NOPs
-    incrementCycleCount();
-    incrementCycleCount();
-
-    // Push PC onto stack
-    writeMemoryAndIncrementCycles(PC.getMSB(), --SP.data);
-    writeMemoryAndIncrementCycles(PC.getLSB(), --SP.data);
-        
-    // Jump to interrupt vector
-    PC.data = INTERRUPT_VECTORS[activeInterrupt];
-
-    // Reset IME
-    IME = false;
-}
-
-bool CPU::checkForInterrupts() {
-    bool interrupt = memory->directRead(IF_REG_ADDR) & memory->directRead(IE_REG_ADDR) & 0x1F;
-    incrementCycleCount();
-    return interrupt;
-}
-
 
 /*
 *  OP CODE IMPLEMENTATIONS
@@ -1252,9 +1291,10 @@ void CPU::ADD(SpecialRegister& dest, int8_t data)
         }
     }
 
-    dest.data = dest.data + data;
 
-    cycles += 2;
+    dest.data = dest.data + data;
+    incrementCycleCount();
+    incrementCycleCount();
 }
 
 void CPU::ADD(RegisterPair& dest, SpecialRegister src) {
@@ -1316,7 +1356,6 @@ void CPU::CP(Register src) {
 
 void CPU::CP(uint16_t address) {
     cpByteValueAgainstA(readMemoryAndIncrementCycles(address));
-
 }
 
 void CPU::CP(uint8_t data) {
@@ -1671,6 +1710,7 @@ void CPU::SLA(uint16_t address) {
 
     writeMemoryAndIncrementCycles(data, address);
 }
+
 void CPU::SRA(Register& r) {
     if (r.data & 0x01) {
         setFlags(C_FLAG);
@@ -1751,9 +1791,9 @@ void CPU::SWAP(uint16_t address) {
         unsetFlags(Z_FLAG);
     }
 
-    writeMemoryAndIncrementCycles(data, address);
-
     unsetFlags(C_FLAG | H_FLAG | N_FLAG);
+
+    writeMemoryAndIncrementCycles(data, address);
 }
 
 void CPU::SRL(Register& r) {

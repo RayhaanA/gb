@@ -18,7 +18,8 @@ private:
 
     bool interruptHandledThisTick = false;
     uint32_t cycles = 0;
-
+    uint32_t frameCycles = 0;
+    bool frameDone = false;
     std::unique_ptr<MMU> memory;
     std::unique_ptr<PPU> ppu;
     std::unique_ptr<Timers> timers;
@@ -164,43 +165,41 @@ private:
     }
 
     bool haltBugActive = false; // System encounters a bug when halt mode is entered, IME = 0, and an Interrupt is ready and enabled
-                                // This shows up as the next instruction not incrementing the PC
+                                // This affects the system by the next instruction not incrementing the PC
     void handleInterrupts();
     bool checkForInterrupts();
 
-    // Increment cycles, check for interrupt enabling, incremeent timers, forward time change to PPU
-    void incrementCycleCount() {
-        cycles += CYCLES_PER_INCREMENT;
-        
-        if (enableInterruptsNextCycle) {
-            IME = true;
-            enableInterruptsNextCycle = false;
-        }
-
-        if (timaInterruptRequest) {
-            requestInterrupt(TIMER_INTERRUPT_FLAG);
-            memory->directWrite(memory->directRead(TMA_REG_ADDR), TIMA_REG_ADDR);
-            timaInterruptRequest = false;
-        }
-
-        timers->incrementTimers();
-
-        if (cycles > FREQUENCY) {
-            cycles -= FREQUENCY;
-        }
-
-        ppu->incrementCycleCount();
-    }
+    // Increment cycles, check for interrupt enabling, increment timers, check for active DMA, forward time change to PPU
+    void incrementCycleCount();
 
     uint8_t readMemoryAndIncrementCycles(uint16_t address) {
+        // Can only access HRAM during DMA
+        if (dmaActive && !memory->addressInHRAM(address)) {
+            return UNDEFINED_READ;
+        }
         uint8_t data = memory->read(address, *ppu);
         incrementCycleCount();
         return data;
     }
 
     void writeMemoryAndIncrementCycles(uint8_t data, uint16_t address) {
+        // Can only access HRAM during DMA
+        if (dmaActive && !memory->addressInHRAM(address)) {
+            return;
+        }
         memory->write(data, address, *ppu);
         incrementCycleCount();
+    }
+
+    void dmaCopyByte() {
+        if (numBytesCopiedDuringDMA < 160) {
+            getMemory()[OAM_TABLE_ADDR + numBytesCopiedDuringDMA] = getMemory()[dmaSourceAddress + numBytesCopiedDuringDMA];
+            ++numBytesCopiedDuringDMA;
+        }
+        else {
+            dmaActive = false;
+            numBytesCopiedDuringDMA = 0;
+        }
     }
 
 public:
@@ -291,5 +290,12 @@ public:
         while (PC.data != pPC) {
             tick();
         }
+    }
+
+    void runOneFrame() {
+        while (!frameDone) {
+            tick();
+        }
+        frameDone = false;
     }
 };
