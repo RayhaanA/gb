@@ -45,7 +45,7 @@ public:
         for (size_t i = 0; i < BOOT_ROM_SIZE; ++i) {
             bootAreaRemap[i] = rom[i];
         }
-        for (size_t i = BOOT_ROM_SIZE; i < MEMORY_SIZE; ++i) {
+        for (size_t i = BOOT_ROM_SIZE; i < rom.size(); ++i) {
             memory[i] = rom[i];
         }
 
@@ -55,6 +55,12 @@ public:
             break;
         case 0x1:
             mbc = std::unique_ptr<MemoryController>(new MBC1(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
+            break;
+        case 0x2:
+            mbc = std::unique_ptr<MemoryController>(new NoMBC(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
+            break;
+        case 0x3:
+            mbc = std::unique_ptr<MemoryController>(new NoMBC(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
             break;
         default:
             break;
@@ -122,6 +128,10 @@ public:
 
     bool addressInHRAM(uint16_t address) {
         return (address >= 0xFF80 && address <= 0xFFFE);
+    }
+
+    bool addressInOAMBugRegion(uint16_t address) {
+        return (address >= 0xFE00 && address <= 0xFEFF);
     }
 };
 

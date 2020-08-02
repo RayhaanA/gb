@@ -54,7 +54,7 @@ public:
                     }
                 }
                 else {
-                    return 0;
+                    return UNDEFINED_READ;
                 }
                 break;
             case 0xF00:
@@ -217,7 +217,6 @@ public:
                         break;
                     case 0x50: case 0x60: case 0x70:
                         memory[address] = data;
-                        //ppu.updateRegisters(address);
                         break;
                     default:
                         memory[address] = data;

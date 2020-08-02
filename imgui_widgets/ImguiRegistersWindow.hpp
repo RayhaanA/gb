@@ -48,13 +48,12 @@ struct RegistersWindow {
         ImGui::Text("Cycle count: %d", cpu.getCurrentCycleCount());
         ImGui::Separator();
 
-        ImGui::Columns(2, "header");
+        ImGui::Columns(3, "header");
 
         ImGui::Text("Last I: %X", cpu.getCurrInstruction()); ImGui::NextColumn();
-        ImGui::Text("IME: %d", IME);
-        ImGui::Separator();
-
-        ImGui::Columns(3, "registers");
+        ImGui::Text("IME: %d", IME); ImGui::NextColumn();
+        ImGui::Text("Halted: %d", halted); ImGui::NextColumn();
+        ImGui::Separator(); ImGui::Separator();
         ImGui::Text("Register"); ImGui::NextColumn();
         ImGui::Text("Value"); ImGui::NextColumn();
         ImGui::Text("Prev Value"); ImGui::NextColumn();

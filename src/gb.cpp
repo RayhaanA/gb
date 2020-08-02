@@ -22,7 +22,9 @@ void reset(CPU& cpu, MMU& mmu, PPU& ppu, std::vector<uint8_t>& rom) {
 }
 
 int main() {
-    std::vector<uint8_t> rom = util::parseRomFile("./roms/blargg_cpu_instrs/cpu_instrs.gb");
+    static bool running = false;
+
+    std::vector<uint8_t> rom = util::parseRomFile("./roms/blargg_tests/cpu_instrs.gb");
     
     MMU mmu(rom);
 
@@ -48,7 +50,7 @@ int main() {
     cpu.runUntilRomStart();
 
     //cpu.runUntilCompletion();
-
+    int i = 0;
     while (display.isOpen())
     {
         sf::Event event;
@@ -66,11 +68,18 @@ int main() {
                 if (event.key.code == sf::Keyboard::R) {
                     reset(cpu, mmu, ppu, rom);
                 }
+                if (event.key.code == sf::Keyboard::P) {
+                    running = !running;
+                }
             }
         }
         
         display.update();
-        cpu.runOneFrame();
+
+        if (running) {
+            cpu.runOneFrame();
+        }
+
         memEdit.drawWindow("Memory Editor", mmu.getMemory().data(), 0x10000, 0x0000);
         disassemblyViewer.drawWindow(cpu);
         //ImGui::ShowDemoWindow();

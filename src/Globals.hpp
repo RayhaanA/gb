@@ -46,6 +46,9 @@ static bool resetSysCounter = false;
 static uint16_t dmaCycleCount = 0;
 static uint16_t numBytesCopiedDuringDMA = 0;
 static uint16_t dmaSourceAddress = 0;
+static uint8_t currSpriteIndex = 0;
+const uint8_t MAX_SPRITES = 40;
+const uint16_t SPRITE_BYTE_WIDTH = 4;
 
 constexpr uint8_t Z_FLAG = 1 << 7;
 constexpr uint8_t N_FLAG = 1 << 6;

@@ -8,6 +8,9 @@
 
 namespace util {
     int32_t make16Wide(std::vector<uint8_t>& rom, int32_t& i) {
+        if (i > rom.size() - 3) {
+            return 0;
+        }
         int16_t low = static_cast<int16_t>(rom[++i]);
         int16_t high = static_cast<int16_t>(rom[++i]);
         int32_t value = low;

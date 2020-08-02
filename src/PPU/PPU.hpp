@@ -14,7 +14,7 @@ enum class PPUMode {
 };
 
 enum class PixelFetchState {
-    GET_TILE,
+    GET_TILE_ID,
     GET_TILE_DATA_LOW,
     GET_TILE_DATA_HIGH,
     SLEEP,
@@ -53,12 +53,32 @@ struct Pixel {
     bool bgPriority = false;
 };
 
+struct Sprite {
+    uint8_t y;
+    uint8_t x;
+    uint8_t tile;
+    uint8_t attributes;
+    uint8_t index;
+
+    Sprite(uint8_t xpos, uint8_t ypos, uint8_t t, uint8_t a, uint8_t i) :
+        x(xpos), y(ypos), tile(t), attributes(a), index(i) {}
+
+    // Sprite priority is based on lower x values having higher priority
+    // Equal x means sprite which comes first in memory has higher priority
+    bool operator<(const Sprite& other) const {
+        if (x != other.x) {
+            return x < other.x;
+        }
+        else {
+            return index < other.index;
+        }
+    }
+};
+
 class PPU {
     std::unique_ptr<std::vector<uint8_t>> memory;
     std::unique_ptr<Display> display;
 
-    uint32_t cycles = 0; // Overall clock cycles
-    uint32_t frameCycles = 0; // Frame cycles
     uint16_t modeCycles = 0; // Cycles in current ppu mode
     uint8_t ly = 0; // Curr scan line (Y)
     uint8_t lyc = 0; // LY compare
@@ -67,19 +87,27 @@ class PPU {
     uint8_t scx = 0; // Curr scroll x
     uint8_t scy = 0; // Curr scroll y
 
-    const uint16_t H_BLANK_CYCLES = 200;
+    const uint16_t H_BLANK_CYCLES = 204;
     const uint16_t V_BLANK_CYCLES = 456;
-    const uint16_t OAM_SEARCH_CYCLES = 84;
+    const uint16_t OAM_SEARCH_CYCLES = 80;
     const uint16_t DATA_TRANSFER_CYCLES = 172;
     const uint16_t WX_OFFSET = 7;
+    const uint16_t SPRITE_Y_OFFSET = 16;
+    const uint16_t SPRITE_X_OFFSET = 8;
+    const uint16_t MAX_SPRITES_PER_LINE = 10;
+
+    bool dontDrawFirstFrame = false;
 
     ControlRegister controlRegister;
     StatusRegister statusRegister;
     PPUMode mode = PPUMode::OAM_SEARCH;
-    PixelFetchState pixelFetchState = PixelFetchState::GET_TILE;
+    PixelFetchState pixelFetchState = PixelFetchState::GET_TILE_ID;
 
+    uint8_t fetcherCycles = 0;
     uint8_t pixelFetcherX = 0;
     uint8_t pixelFetcherY = 0;
+
+    std::vector<Sprite> spritesForCurrLine;
 
     sf::Color TRANSPARENT = sf::Color(0, 0, 0, 0);
     std::vector<sf::Color> PALETTE = { sf::Color(255, 255, 255),
@@ -117,6 +145,29 @@ class PPU {
         return PALETTE[static_cast<size_t>(c)];
     }
 
+    void updateCoincidenceBit(bool set) {
+        statusRegister.coincideFlag = set;
+        if (set) {
+            (*memory)[STATUS_REG_ADDR] |= 1 << 2;
+        }
+        else {
+            (*memory)[STATUS_REG_ADDR] &= ~(1 << 2);
+        }
+    }
+
+    bool spriteIsVisible(uint16_t spriteAddress) {
+        uint8_t x = (*memory)[spriteAddress];
+        uint8_t y = (*memory)[spriteAddress + 1];
+        
+        return y <= (ly + SPRITE_Y_OFFSET) &&
+            (ly + SPRITE_Y_OFFSET) < (y + (controlRegister.objectSize ? 16 : 8)) &&
+            x != 0;
+    }
+
+    Sprite createSprite(uint16_t address, uint8_t index) {
+        return { (*memory)[address], (*memory)[address + 1], (*memory)[address + 2], (*memory)[address + 3], index };
+    }
+
     void drawScanLine() {}
     void pushFrame() {}
     void resetLY();
@@ -135,10 +186,11 @@ public:
         ob1Palette = { { TRANSPARENT, 4 }, { PALETTE[0], 0 }, { PALETTE[0], 0 }, { PALETTE[0], 0 } };
         frameBuffer.reserve(WIDTH * HEIGHT * 4);
         for (size_t i = 0; i < frameBuffer.capacity(); ++i) {
-            frameBuffer[i] = 255;
+            frameBuffer.push_back(255);
         }
         frame.create(WIDTH, HEIGHT);
         frame.update(frameBuffer.data());
+        spritesForCurrLine.reserve(MAX_SPRITES_PER_LINE);
     }
 
     ~PPU() {
@@ -148,16 +200,30 @@ public:
 
     void reset() {
         display->clearWindow();
-    }
-    
-    void updateCoincidenceBit(bool set) {
-        statusRegister.coincideFlag = set;
-        if (set) {
-            (*memory)[STATUS_REG_ADDR] |= 1 << 2;
+        bgPalette = { { PALETTE[0], 0 }, { PALETTE[0], 0 }, { PALETTE[0], 0 }, { PALETTE[0], 0 } };
+        ob0Palette = { { TRANSPARENT, 4 }, { PALETTE[0], 0 }, { PALETTE[0], 0 }, { PALETTE[0], 0 } };
+        ob1Palette = { { TRANSPARENT, 4 }, { PALETTE[0], 0 }, { PALETTE[0], 0 }, { PALETTE[0], 0 } };
+        frameBuffer.reserve(WIDTH * HEIGHT * 4);
+        for (size_t i = 0; i < frameBuffer.capacity(); ++i) {
+            frameBuffer[i] = 255;
         }
-        else {
-            (*memory)[STATUS_REG_ADDR] &= ~(1 << 2);
-        }
+
+        frame.create(WIDTH, HEIGHT);
+        frame.update(frameBuffer.data());
+        modeCycles = 0;
+        ly = 0;
+        lyc = 0;
+        wx = 0;
+        wy = 0;
+        scx = 0;
+        scy = 0;
+        controlRegister = {};
+        statusRegister = {};
+        mode = PPUMode::OAM_SEARCH;
+        pixelFetchState = PixelFetchState::GET_TILE_ID;
+        fetcherCycles = 0;
+        pixelFetcherX = 0;
+        pixelFetcherY = 0;
     }
 
     void incrementCycleCount() {
@@ -165,12 +231,8 @@ public:
             if (displayIsBlank) {
                 displayIsBlank = false;
             }
-            cycles += CYCLES_PER_INCREMENT;
-            if (cycles > FREQUENCY) {
-                cycles -= FREQUENCY;
-            }
-            modeCycles += CYCLES_PER_INCREMENT;
             tick();
+            modeCycles += CYCLES_PER_INCREMENT;
         }
         else {
             if (!displayIsBlank) {
@@ -196,6 +258,6 @@ public:
     uint8_t getSTAT() { return readRegisterValues(STATUS_REG_ADDR); }
     sf::Texture& getFrame() { return frame; }
 
-    bool getDisplayEnabled() const { return controlRegister.displayEnable; }
+    bool getDisplayEnabled() { return (getLCDC() & 0x80); }
     void write(uint8_t data, uint16_t address) { (*memory)[address] = data; }
 };

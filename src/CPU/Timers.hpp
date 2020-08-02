@@ -67,4 +67,10 @@ public:
         incrementDIV();
         incrementTIMA();
     }
+
+    void reset() {
+        divCounter = 0;
+        resetSysCounter = false;
+        timerCounter = 0;
+    }
 };

@@ -47,7 +47,9 @@ void PPU::tick() {
 
             if (ly == 143) {
                 mode = PPUMode::V_BLANK;
-
+                if (dontDrawFirstFrame) {
+                    dontDrawFirstFrame = false;
+                }
                 // Handle v-blank interrupt
                 if (controlRegister.displayEnable) {
                     if (wroteZeroToVBLIF) {
@@ -91,36 +93,92 @@ void PPU::tick() {
         }
         break;
     case PPUMode::OAM_SEARCH:
-        if (modeCycles >= OAM_SEARCH_CYCLES) {
+        if (modeCycles < OAM_SEARCH_CYCLES) {
+            // Check two sprites per cycle to add to sprites for curr line
+            for (int32_t i = 0; i < 2; ++i, ++currSpriteIndex) {
+                if (spritesForCurrLine.size() == MAX_SPRITES_PER_LINE) {
+                    continue;
+                }
+
+                if (spriteIsVisible(OAM_TABLE_ADDR + currSpriteIndex * SPRITE_BYTE_WIDTH)) {
+                    spritesForCurrLine.push_back(createSprite(OAM_TABLE_ADDR + currSpriteIndex * SPRITE_BYTE_WIDTH, currSpriteIndex));
+                }
+            }
+        }
+        else {
+            // Sort sprites we found based on priority
+            std::sort(spritesForCurrLine.begin(), spritesForCurrLine.end());
+            currSpriteIndex = 0;
             modeCycles = 0;
             mode = PPUMode::DATA_TRANSFER;
+
+            // Reset fetcher state
+            bgFifo = {};
+            oamFifo = {};
+            fetcherCycles = 0;
+            pixelFetcherX = 0;
+            pixelFetcherY = 0;
+            currSpriteIndex = 0;
         }
         break;
     case PPUMode::DATA_TRANSFER:
-        if (modeCycles == 0) {
-            bgFifo = {};
-            oamFifo = {};
-        }
-        else if (modeCycles < DATA_TRANSFER_CYCLES) {
-            switch (pixelFetchState) {
-            case PixelFetchState::GET_TILE:
+        if (modeCycles < DATA_TRANSFER_CYCLES) {
+            if (dontDrawFirstFrame) {
                 break;
+            }
+
+            ++fetcherCycles;
+            
+            if (fetcherCycles < 2) {
+                break;
+            }
+
+            fetcherCycles = 0;
+
+            switch (pixelFetchState) {
+            case PixelFetchState::GET_TILE_ID:
+            {
+                uint16_t tileMapAddress = 0;
+                bool inWindow = controlRegister.windowDisplayEnable && scx >= wx;
+
+                if (!inWindow) {
+                    tileMapAddress = mapStartValues[static_cast<uint8_t>(controlRegister.bgTileMapDisplaySelect)];
+                    pixelFetcherX = (pixelFetcherX + scx / 8) & 0x1F;
+                    pixelFetcherY = (ly + scy) & 0xFF;
+                }
+                else {
+                    tileMapAddress = mapStartValues[static_cast<uint8_t>(controlRegister.windowTileMapSelect)];
+                    pixelFetcherX = scx - wx;
+                    pixelFetcherY = ly - wy;
+                }
+
+
+                pixelFetchState = PixelFetchState::GET_TILE_DATA_LOW;
+                break;
+            }
             case PixelFetchState::GET_TILE_DATA_LOW:
+                pixelFetchState = PixelFetchState::GET_TILE_DATA_HIGH;
                 break;
             case PixelFetchState::GET_TILE_DATA_HIGH:
+                pixelFetchState = PixelFetchState::SLEEP;
                 break;
             case PixelFetchState::SLEEP:
+                pixelFetchState = PixelFetchState::PUSH;
                 break;
             case PixelFetchState::PUSH:
+                pixelFetchState = PixelFetchState::GET_TILE_ID;
                 break;
             default:
                 std::cout << "Unhandled pixel fetcher state " << static_cast<uint16_t>(pixelFetchState) << std::endl;
                 break;
             }
         }
-        else if (modeCycles >= DATA_TRANSFER_CYCLES) {
+        else {
             modeCycles = 0;
             mode = PPUMode::H_BLANK;
+            fetcherCycles = 0;
+            spritesForCurrLine.clear();
+            spritesForCurrLine.reserve(MAX_SPRITES_PER_LINE);
 
             // Check for stat interrupt due to data transfer
             if (statusRegister.hBlankInterrupt) {
@@ -141,10 +199,10 @@ void PPU::writeRegistersValues(uint16_t address) {
     switch (address) {
     case CONTROL_REG_ADDR:
         if (controlRegister.displayEnable && ((data & 0x80) == 0)) {
-            cycles = 0;
             modeCycles = 0;
             mode = PPUMode::H_BLANK;
             ly = 0;
+            dontDrawFirstFrame = true;
         }
         controlRegister.displayEnable = data & 0x80;
         controlRegister.windowTileMapSelect = data & 0x40;

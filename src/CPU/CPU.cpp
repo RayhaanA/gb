@@ -77,7 +77,7 @@ void CPU::incrementCycleCount() {
 
     timers->incrementTimers();
 
-    if (dmaActive) {
+    if (dmaActive && !halted && !stopped) {
         dmaCopyByte();
     }
 
@@ -184,6 +184,68 @@ bool CPU::checkForInterrupts() {
     return interrupt;
 }
 
+void CPU::triggerOAMBug(bool read) {
+    // Doesn't happen if PPU accessing first two sprites (or PPU is finished OAM search)
+    if (currSpriteIndex < 2 || currSpriteIndex == MAX_SPRITES) {
+        return;
+    }
+
+    uint8_t row = ((currSpriteIndex & 1) ? currSpriteIndex - 1 : currSpriteIndex) / 2;
+    uint16_t rowStartAddr = OAM_TABLE_ADDR + row * (2 * SPRITE_BYTE_WIDTH);
+
+    if (!read) {
+        // Calculate new value for first word in row (words are 16-bit in OAM)
+        uint8_t newValue = oamBugWrite(memory->directRead(rowStartAddr), memory->directRead(rowStartAddr - 8),
+            memory->directRead(rowStartAddr - 4));
+        memory->directWrite(newValue, rowStartAddr);
+
+        newValue = oamBugWrite(memory->directRead(rowStartAddr + 1), memory->directRead(rowStartAddr - 7),
+            memory->directRead(rowStartAddr - 3));
+        memory->directWrite(newValue, rowStartAddr + 1);
+
+        for (int32_t i = 2; i < 8; ++i) {
+            memory->directWrite(memory->directRead(rowStartAddr + i - (2 * SPRITE_BYTE_WIDTH)), rowStartAddr + i);
+        }
+    }
+    else {
+        uint8_t newValue = oamBugRead(memory->directRead(rowStartAddr), memory->directRead(rowStartAddr - 8),
+            memory->directRead(rowStartAddr - 4));
+        memory->directWrite(newValue, rowStartAddr);
+
+        newValue = oamBugRead(memory->directRead(rowStartAddr + 1), memory->directRead(rowStartAddr - 7),
+            memory->directRead(rowStartAddr - 3));
+        memory->directWrite(newValue, rowStartAddr + 1);
+
+        for (int32_t i = 2; i < 8; ++i) {
+            memory->directWrite(memory->directRead(rowStartAddr + i - (2 * SPRITE_BYTE_WIDTH)), rowStartAddr + i);
+        }
+    }
+}
+
+void CPU::triggerOAMBugIncrease() {
+    // Only needed for reads, equivalent for double write is a single write
+
+    uint8_t row = ((currSpriteIndex & 1) ? currSpriteIndex - 1 : currSpriteIndex) / 2;
+    uint16_t rowStartAddr = OAM_TABLE_ADDR + row * (2 * SPRITE_BYTE_WIDTH);
+
+    // First corruption doesn't happen if PPU accessingn first 8 sprites, or last 2
+    if (!(currSpriteIndex < 8 || currSpriteIndex >= (MAX_SPRITES - 2))) {
+        uint8_t newValue = oamBugReadIncrease(memory->directRead(rowStartAddr - 16), memory->directRead(rowStartAddr - 8),
+            memory->directRead(rowStartAddr), memory->directRead(rowStartAddr - 4));
+        memory->directWrite(newValue, rowStartAddr - 8);
+
+        newValue = oamBugReadIncrease(memory->directRead(rowStartAddr - 15), memory->directRead(rowStartAddr - 7),
+            memory->directRead(rowStartAddr + 1), memory->directRead(rowStartAddr - 3));
+        memory->directWrite(newValue, rowStartAddr - 7);
+
+        for (int32_t i = 0; i < 8; ++i) {
+            memory->directWrite(memory->directRead(rowStartAddr + i - (2 * SPRITE_BYTE_WIDTH)), rowStartAddr + i);
+            memory->directWrite(memory->directRead(rowStartAddr + i - (2 * SPRITE_BYTE_WIDTH)), rowStartAddr - 16 + i);
+        }
+    }
+
+    triggerOAMBug(true);
+}
 // Jump table
 
 void CPU::callInstruction(uint16_t instruction) {
@@ -1140,11 +1202,27 @@ void CPU::LD(RegisterPair& dest, SpecialRegister src, int8_t offset) {
 }
 
 void CPU::LDI(Register& src, bool setA) {
+    if (oamBugShouldOccur(HL.getData())) {
+        if (setA) {
+            triggerOAMBugIncrease();
+        }
+        else {
+            triggerOAMBug(false);
+        }
+    }
     setA ? (A = readMemoryAndIncrementCycles(HL.getData())) : writeMemoryAndIncrementCycles(src.data, HL.getData());
     ++HL;
 }
 
 void CPU::LDD(Register& src, bool setA) {
+    if (oamBugShouldOccur(HL.getData())) {
+        if (setA) {
+            triggerOAMBugIncrease();
+        }
+        else {
+            triggerOAMBug(false);
+        }
+    }
     setA ? (A = readMemoryAndIncrementCycles(HL.getData())) : writeMemoryAndIncrementCycles(src.data, HL.getData());
     --HL;
 }
@@ -1170,11 +1248,17 @@ void CPU::INC(Register& r) {
 }
 
 void CPU::INC(RegisterPair& r) {
+    if (oamBugShouldOccur(r.getData())) {
+        triggerOAMBug(false);
+    }
     ++r;
     incrementCycleCount();
 }
 
 void CPU::INC(SpecialRegister& r) {
+    if (oamBugShouldOccur(r.data)) {
+        triggerOAMBug(false);
+    }
     ++r;
     incrementCycleCount();
 }
@@ -1222,11 +1306,17 @@ void CPU::DEC(Register& r) {
 }
 
 void CPU::DEC(RegisterPair& r) {
+    if (oamBugShouldOccur(r.getData())) {
+        triggerOAMBug(false);
+    }
     --r;
     incrementCycleCount();
 }
 
 void CPU::DEC(SpecialRegister& r) {
+    if (oamBugShouldOccur(r.data)) {
+        triggerOAMBug(false);
+    }
     --r;
     incrementCycleCount();
 }

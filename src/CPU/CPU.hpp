@@ -177,6 +177,7 @@ private:
         if (dmaActive && !memory->addressInHRAM(address)) {
             return UNDEFINED_READ;
         }
+
         uint8_t data = memory->read(address, *ppu);
         incrementCycleCount();
         return data;
@@ -192,15 +193,24 @@ private:
     }
 
     void dmaCopyByte() {
-        if (numBytesCopiedDuringDMA < 160) {
+        if (numBytesCopiedDuringDMA < 159) {
             getMemory()[OAM_TABLE_ADDR + numBytesCopiedDuringDMA] = getMemory()[dmaSourceAddress + numBytesCopiedDuringDMA];
             ++numBytesCopiedDuringDMA;
         }
         else {
+            getMemory()[OAM_TABLE_ADDR + numBytesCopiedDuringDMA] = getMemory()[dmaSourceAddress + numBytesCopiedDuringDMA];
             dmaActive = false;
             numBytesCopiedDuringDMA = 0;
         }
     }
+
+    // Bug that happens when doing stuff in 0xFE00 - 0xFEFF range during mode 2 of PPU
+    bool oamBugShouldOccur(uint16_t address) { return ppu->getMode() == PPUMode::OAM_SEARCH && memory->addressInOAMBugRegion(address) && ppu->getDisplayEnabled(); }
+    void triggerOAMBug(bool read);
+    void triggerOAMBugIncrease();
+    uint8_t oamBugWrite(uint8_t a, uint8_t b, uint8_t c) { return ((a ^ c) & (b ^ c)) ^ c; }
+    uint8_t oamBugRead(uint8_t a, uint8_t b, uint8_t c) { return b | (a & c); }
+    uint8_t oamBugReadIncrease(uint8_t a, uint8_t b, uint8_t c, uint8_t d) { return (b & (a | c | d)) | (a & c & d); }
 
 public:
     CPU() = default;
@@ -267,6 +277,8 @@ public:
         IME = false;
         stopped = false;
         cycles = 0;
+
+        timers->reset();
     }
 
     void printRegisters() {
