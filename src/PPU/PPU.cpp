@@ -42,14 +42,16 @@ void PPU::tick() {
     switch (mode) {
     case PPUMode::H_BLANK:
         if (modeCycles >= H_BLANK_CYCLES) {
-            modeCycles = 0;
+            modeCycles = -4;
             mode = PPUMode::OAM_SEARCH;
+            xPos = 0;
 
             if (ly == 143) {
                 mode = PPUMode::V_BLANK;
                 if (dontDrawFirstFrame) {
                     dontDrawFirstFrame = false;
                 }
+
                 // Handle v-blank interrupt
                 if (controlRegister.displayEnable) {
                     if (wroteZeroToVBLIF) {
@@ -75,7 +77,7 @@ void PPU::tick() {
         break;
     case PPUMode::V_BLANK:
         if (modeCycles >= V_BLANK_CYCLES) {
-            modeCycles = 0;
+            modeCycles = -4;
 
             if (ly == 153) {
                 mode = PPUMode::OAM_SEARCH;
@@ -109,7 +111,7 @@ void PPU::tick() {
             // Sort sprites we found based on priority
             std::sort(spritesForCurrLine.begin(), spritesForCurrLine.end());
             currSpriteIndex = 0;
-            modeCycles = 0;
+            modeCycles = -4;
             mode = PPUMode::DATA_TRANSFER;
 
             // Reset fetcher state
@@ -138,18 +140,23 @@ void PPU::tick() {
             switch (pixelFetchState) {
             case PixelFetchState::GET_TILE_ID:
             {
-                uint16_t tileMapAddress = 0;
-                bool inWindow = controlRegister.windowDisplayEnable && scx >= wx;
+                if (!controlRegister.bgWindowDisplayPriority) {
 
-                if (!inWindow) {
-                    tileMapAddress = mapStartValues[static_cast<uint8_t>(controlRegister.bgTileMapDisplaySelect)];
-                    pixelFetcherX = (pixelFetcherX + scx / 8) & 0x1F;
-                    pixelFetcherY = (ly + scy) & 0xFF;
                 }
                 else {
-                    tileMapAddress = mapStartValues[static_cast<uint8_t>(controlRegister.windowTileMapSelect)];
-                    pixelFetcherX = scx - wx;
-                    pixelFetcherY = ly - wy;
+                    uint16_t tileMapAddress = 0;
+                    bool inWindow = controlRegister.windowDisplayEnable && scx >= wx;
+
+                    if (!inWindow) {
+                        tileMapAddress = mapStartValues[static_cast<uint8_t>(controlRegister.bgTileMapDisplaySelect)];
+                        pixelFetcherX = (pixelFetcherX + scx / 8) & 0x1F;
+                        pixelFetcherY = (ly + scy) & 0xFF;
+                    }
+                    else {
+                        tileMapAddress = mapStartValues[static_cast<uint8_t>(controlRegister.windowTileMapSelect)];
+                        pixelFetcherX = scx - wx;
+                        pixelFetcherY = ly - wy;
+                    }
                 }
 
 
@@ -174,9 +181,11 @@ void PPU::tick() {
             }
         }
         else {
-            modeCycles = 0;
+            modeCycles = -4;
             mode = PPUMode::H_BLANK;
             fetcherCycles = 0;
+
+            // Clear sprites for next line
             spritesForCurrLine.clear();
             spritesForCurrLine.reserve(MAX_SPRITES_PER_LINE);
 
@@ -199,7 +208,7 @@ void PPU::writeRegistersValues(uint16_t address) {
     switch (address) {
     case CONTROL_REG_ADDR:
         if (controlRegister.displayEnable && ((data & 0x80) == 0)) {
-            modeCycles = 0;
+            modeCycles = -4;
             mode = PPUMode::H_BLANK;
             ly = 0;
             dontDrawFirstFrame = true;

@@ -60,8 +60,8 @@ struct Sprite {
     uint8_t attributes;
     uint8_t index;
 
-    Sprite(uint8_t xpos, uint8_t ypos, uint8_t t, uint8_t a, uint8_t i) :
-        x(xpos), y(ypos), tile(t), attributes(a), index(i) {}
+    Sprite(uint8_t ypos, uint8_t xpos, uint8_t t, uint8_t a, uint8_t i) :
+        y(ypos), x(xpos), tile(t), attributes(a), index(i) {}
 
     // Sprite priority is based on lower x values having higher priority
     // Equal x means sprite which comes first in memory has higher priority
@@ -103,12 +103,17 @@ class PPU {
     PPUMode mode = PPUMode::OAM_SEARCH;
     PixelFetchState pixelFetchState = PixelFetchState::GET_TILE_ID;
 
+    // Fetcher data
     uint8_t fetcherCycles = 0;
     uint8_t pixelFetcherX = 0;
     uint8_t pixelFetcherY = 0;
+    uint8_t tileID = 0;
+    std::queue<Pixel> bgFifo;
+    std::queue<Pixel> oamFifo;
 
     std::vector<Sprite> spritesForCurrLine;
 
+    // Pallettes
     sf::Color TRANSPARENT = sf::Color(0, 0, 0, 0);
     std::vector<sf::Color> PALETTE = { sf::Color(255, 255, 255),
                                          sf::Color(192, 192, 192),
@@ -119,17 +124,18 @@ class PPU {
     std::vector<std::pair<sf::Color, uint8_t>> ob0Palette;
     std::vector<std::pair<sf::Color, uint8_t>> ob1Palette;
 
+    // Tile map addresses
     std::vector<uint16_t> mapStartValues = { 0x9800, 0x9C00 }; // Window/BG tile map ranges
     std::vector<uint16_t> mapEndValues = { 0x9BFF, 0x9FFF };
 
+    // VRAM key locations
     std::vector<uint16_t> dataStartValues = { 0x8800, 0x8000 }; // Window/BG tile data ranges
     std::vector<uint16_t> dataEndValues = { 0x97FF, 0x8FFF };
-    
-    std::queue<Pixel> bgFifo;
-    std::queue<Pixel> oamFifo;
 
+    // Frame to draw on
     std::vector<uint8_t> frameBuffer;
     sf::Texture frame;
+    uint8_t xPos = 0;
 
     bool displayIsBlank = true;
 
@@ -224,6 +230,7 @@ public:
         fetcherCycles = 0;
         pixelFetcherX = 0;
         pixelFetcherY = 0;
+        currSpriteIndex = 0;
     }
 
     void incrementCycleCount() {

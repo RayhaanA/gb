@@ -173,7 +173,7 @@ private:
     void incrementCycleCount();
 
     uint8_t readMemoryAndIncrementCycles(uint16_t address) {
-        // Can only access HRAM during DMA
+        // Can only access HRAM during DMA (todo: actually maybe not according to mooneye)
         if (dmaActive && !memory->addressInHRAM(address)) {
             return UNDEFINED_READ;
         }
@@ -192,6 +192,7 @@ private:
         incrementCycleCount();
     }
 
+    // DMA routine
     void dmaCopyByte() {
         if (numBytesCopiedDuringDMA < 159) {
             getMemory()[OAM_TABLE_ADDR + numBytesCopiedDuringDMA] = getMemory()[dmaSourceAddress + numBytesCopiedDuringDMA];
@@ -276,6 +277,16 @@ public:
         PC = SP = 0;
         IME = false;
         stopped = false;
+        halted = false;
+        dmaActive = false;
+        numBytesCopiedDuringDMA = 0;
+        enableInterruptsNextCycle = false;
+        timaInterruptRequest = false;
+        wroteZeroToVBLIF = false;
+        resetSysCounter = false;
+        dmaCycleCount = 0;
+        numBytesCopiedDuringDMA = 0;
+        dmaSourceAddress = 0;
         cycles = 0;
 
         timers->reset();
@@ -289,11 +300,15 @@ public:
      }
 
     void runUntilRomStart() {
-        while (PC.data != 0x100) {
+        if (PC.data >= START_OF_ROM) {
+            throw std::runtime_error("Tried to run boot rom but PC was already inside of main rom!\n");
+        }
+
+        while (PC.data != START_OF_ROM) {
             tick();
         }
 
-        for (size_t i = 0; i < 0x100; ++i) {
+        for (size_t i = 0; i < START_OF_ROM; ++i) {
             memory->getMemory()[i] = memory->getBootAreaRemap()[i];
         }
     }
@@ -306,6 +321,13 @@ public:
 
     void runOneFrame() {
         while (!frameDone) {
+            if (needToRunBootRom && PC.data >= START_OF_ROM) {
+                for (size_t i = 0; i < START_OF_ROM; ++i) {
+                    memory->getMemory()[i] = memory->getBootAreaRemap()[i];
+                }
+                needToRunBootRom = false;
+            }
+
             tick();
         }
         frameDone = false;

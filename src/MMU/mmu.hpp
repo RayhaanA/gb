@@ -57,10 +57,10 @@ public:
             mbc = std::unique_ptr<MemoryController>(new MBC1(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
             break;
         case 0x2:
-            mbc = std::unique_ptr<MemoryController>(new NoMBC(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
+            mbc = std::unique_ptr<MemoryController>(new MBC1(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
             break;
         case 0x3:
-            mbc = std::unique_ptr<MemoryController>(new NoMBC(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
+            mbc = std::unique_ptr<MemoryController>(new MBC1(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
             break;
         default:
             break;

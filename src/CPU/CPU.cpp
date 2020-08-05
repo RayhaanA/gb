@@ -13,7 +13,7 @@ void CPU::tick() {
     else if (halted) {
         if (IME) {
             while (!checkForInterrupts()) {
-                // wait
+                incrementCycleCount();
             }
                 
             handleInterrupts();
@@ -22,7 +22,7 @@ void CPU::tick() {
         else {
             if (!checkForInterrupts()) {
                 while (!checkForInterrupts()) {
-                    // wait
+                    incrementCycleCount();
                 }
                
                 halted = false;
@@ -42,6 +42,9 @@ void CPU::tick() {
 
         if (!haltBugActive) {
             ++PC;
+        }
+        else {
+            haltBugActive = false;
         }
 
         currInstruction = op;
@@ -64,31 +67,37 @@ void CPU::tick() {
 void CPU::incrementCycleCount() {
     cycles += CYCLES_PER_INCREMENT;
 
+    // Setup interrupt routine
     if (enableInterruptsNextCycle) {
         IME = true;
         enableInterruptsNextCycle = false;
     }
 
+    // Trigger timer interrupt on cycle after overflow
     if (timaInterruptRequest) {
         requestInterrupt(TIMER_INTERRUPT_FLAG);
         memory->directWrite(memory->directRead(TMA_REG_ADDR), TIMA_REG_ADDR);
         timaInterruptRequest = false;
     }
 
+    // Update timers
     timers->incrementTimers();
 
+    // Check for DMA
     if (dmaActive && !halted && !stopped) {
         dmaCopyByte();
     }
 
+    // Careful for overflow
     if (cycles > FREQUENCY) {
         cycles -= FREQUENCY;
     }
 
+    // Let PPU update for the elapsed time
     ppu->incrementCycleCount();
 
+    // Timer to get ready to push frames
     frameCycles += CYCLES_PER_INCREMENT;
-
     if (frameCycles > CYCLES_PER_FRAME) {
         frameDone = true;
         frameCycles -= CYCLES_PER_FRAME;
@@ -128,6 +137,7 @@ void CPU::handleInterrupts() {
 
     // Jump to interrupt vector
     PC.data = INTERRUPT_VECTORS[activeInterrupt];
+    incrementCycleCount();
 
     // Reset IME
     IME = false;
@@ -180,7 +190,6 @@ void CPU::clearInterruptRequest(uint8_t data) {
 
 bool CPU::checkForInterrupts() {
     bool interrupt = memory->directRead(IF_REG_ADDR) & memory->directRead(IE_REG_ADDR) & 0x1F;
-    incrementCycleCount();
     return interrupt;
 }
 

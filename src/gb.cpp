@@ -14,17 +14,21 @@
 #include <chrono>
 
 void reset(CPU& cpu, MMU& mmu, PPU& ppu, std::vector<uint8_t>& rom) {
-    std::cout << "Resetting\n";
+    std::cout << "\nResetting\n";
     cpu.reset();
     mmu.reset();
     ppu.reset();
-    cpu.runUntilRomStart();
+    if (skipBootRom) {
+        cpu.runUntilRomStart();
+        needToRunBootRom = false;
+    }
+    else {
+        needToRunBootRom = true;
+    }
 }
 
 int main() {
-    static bool running = false;
-
-    std::vector<uint8_t> rom = util::parseRomFile("./roms/blargg_tests/cpu_instrs.gb");
+    std::vector<uint8_t> rom = util::parseRomFile("./roms/blargg_tests/instr_timing.gb");
     
     MMU mmu(rom);
 
@@ -47,7 +51,9 @@ int main() {
     static DisassemblyViewer disassemblyViewer(disassembly);
 
     // Run boot sequence
-    cpu.runUntilRomStart();
+    if (skipBootRom) {
+        cpu.runUntilRomStart();
+    }
 
     //cpu.runUntilCompletion();
     int i = 0;
@@ -62,14 +68,22 @@ int main() {
                 display.close();
             }
             else if (event.type == sf::Event::KeyPressed) {
-                if (event.key.code == sf::Keyboard::N) {
+                switch (event.key.code) {
+                case sf::Keyboard::F7:
                     cpu.tick();
-                }
-                if (event.key.code == sf::Keyboard::R) {
-                    reset(cpu, mmu, ppu, rom);
-                }
-                if (event.key.code == sf::Keyboard::P) {
+                    break;
+                case sf::Keyboard::F1:
                     running = !running;
+                    break;
+                case sf::Keyboard::F2:
+                    reset(cpu, mmu, ppu, rom);
+                    running = false;
+                    break;
+                case sf::Keyboard::F3:
+                    skipBootRom = !skipBootRom;
+                    break;
+                default:
+                    break;
                 }
             }
         }
@@ -79,6 +93,10 @@ int main() {
         if (running) {
             cpu.runOneFrame();
         }
+
+        // Some blargg tests have weird output locations, leave this for those
+        //while (mmu.getMemory()[0xA004 + i] != '\0')
+        //    std::cout << mmu.getMemory()[0xA004 + i++];
 
         memEdit.drawWindow("Memory Editor", mmu.getMemory().data(), 0x10000, 0x0000);
         disassemblyViewer.drawWindow(cpu);
