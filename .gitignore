@@ -8,3 +8,4 @@ imgui/.github
 imgui-sfml/examples
 imgui-sfml/out
 imgui-sfml/.gitignore
+roms/
