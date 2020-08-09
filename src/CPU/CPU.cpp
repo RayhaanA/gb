@@ -74,10 +74,10 @@ void CPU::incrementCycleCount() {
     }
 
     // Trigger timer interrupt on cycle after overflow
-    if (timaInterruptRequest) {
+    if (timers->getTIMAInterruptRequest()) {
         requestInterrupt(TIMER_INTERRUPT_FLAG);
         memory->directWrite(memory->directRead(TMA_REG_ADDR), TIMA_REG_ADDR);
-        timaInterruptRequest = false;
+        timers->resetTIMAInterruptRequest();
     }
 
     // Update timers
@@ -255,6 +255,19 @@ void CPU::triggerOAMBugIncrease() {
 
     triggerOAMBug(true);
 }
+
+void CPU::dmaCopyByte() {
+    if (numBytesCopiedDuringDMA < 159) {
+        memory->directWrite(memory->directRead(dmaSourceAddress + numBytesCopiedDuringDMA), OAM_TABLE_ADDR + numBytesCopiedDuringDMA);
+        ++numBytesCopiedDuringDMA;
+    }
+    else {
+        memory->directWrite(memory->directRead(dmaSourceAddress + numBytesCopiedDuringDMA), OAM_TABLE_ADDR + numBytesCopiedDuringDMA);
+        dmaActive = false;
+        numBytesCopiedDuringDMA = 0;
+    }
+}
+
 // Jump table
 
 void CPU::callInstruction(uint16_t instruction) {

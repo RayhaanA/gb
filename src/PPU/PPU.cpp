@@ -1,7 +1,9 @@
 #include "PPU.hpp"
 #include <iostream>
 
-// todo: stat interrupt can happen when display is disabled and then re-enabled if ly == lyc (ly will equal 0 on restart)
+int32_t getBitValue(uint8_t data, uint8_t pos) {
+    return data & (1 << pos) ? 1 : 0;
+}
 
 void PPU::resetLY() {
     ly = 0;
@@ -18,7 +20,7 @@ void PPU::resetLY() {
 
 void PPU::incrementLY() {
     ++ly;
-    if (ly < 144) {
+    if (ly < 154) {
         if (ly == lyc) {
             if (statusRegister.lyCoincidenceInterrupt) {
                 requestInterrupt(STAT_INTERRUPT_FLAG);
@@ -42,9 +44,7 @@ void PPU::tick() {
     switch (mode) {
     case PPUMode::H_BLANK:
         if (modeCycles >= H_BLANK_CYCLES) {
-            modeCycles = -4;
-            mode = PPUMode::OAM_SEARCH;
-            xPos = 0;
+            modeCycles = -CYCLES_PER_INCREMENT;
 
             if (ly == 143) {
                 mode = PPUMode::V_BLANK;
@@ -67,26 +67,29 @@ void PPU::tick() {
                     requestInterrupt(STAT_INTERRUPT_FLAG);
                 }
 
-                // push frame buffer to display here
+                // Increment LY into v-blank region
+                incrementLY();
+
+                // Update texture with frame data
                 pushFrame();
             }
             else {
                 incrementLY();
+                mode = PPUMode::OAM_SEARCH;
+                // Check for stat interrupt due to oam search
+                if (statusRegister.oamInterrupt) {
+                    requestInterrupt(STAT_INTERRUPT_FLAG);
+                }
             }
         }
         break;
     case PPUMode::V_BLANK:
         if (modeCycles >= V_BLANK_CYCLES) {
-            modeCycles = -4;
+            modeCycles = -CYCLES_PER_INCREMENT;
 
             if (ly == 153) {
+                // The OAM condition for STAT IRQ is ignored for the first OAM phase after v-blank
                 mode = PPUMode::OAM_SEARCH;
-
-                // Check for stat interrupt due to oam search
-                if (statusRegister.oamInterrupt) {
-                    requestInterrupt(STAT_INTERRUPT_FLAG);
-                }
-
                 resetLY();
             }
             else {
@@ -111,7 +114,7 @@ void PPU::tick() {
             // Sort sprites we found based on priority
             std::sort(spritesForCurrLine.begin(), spritesForCurrLine.end());
             currSpriteIndex = 0;
-            modeCycles = -4;
+            modeCycles = -CYCLES_PER_INCREMENT;
             mode = PPUMode::DATA_TRANSFER;
 
             // Reset fetcher state
@@ -120,7 +123,6 @@ void PPU::tick() {
             fetcherCycles = 0;
             pixelFetcherX = 0;
             pixelFetcherY = 0;
-            currSpriteIndex = 0;
         }
         break;
     case PPUMode::DATA_TRANSFER:
@@ -129,6 +131,27 @@ void PPU::tick() {
                 break;
             }
 
+            if (haventDrawnYet) {
+                // Draw scan line (naively)
+                if (!dontDrawFirstFrame) {
+                    if (controlRegister.bgWindowDisplayPriority) {
+                        drawScanLine();
+                    }
+
+                    if (controlRegister.objectDisplayEnable) {
+                        drawSprites();
+                    }
+                }
+                
+                haventDrawnYet = false;
+            }
+            /* if (!controlRegister.bgWindowDisplayPriority && pixelFetchState == PixelFetchState::GET_TILE_ID) {
+                if (bgFifo.size() <= 8) {
+                    for (size_t i = 0; i < 8; ++i) {
+                        bgFifo.push({Color::WHITE, PaletteID::BGP, })
+                    }
+                }
+            }
             ++fetcherCycles;
             
             if (fetcherCycles < 2) {
@@ -178,10 +201,11 @@ void PPU::tick() {
             default:
                 std::cout << "Unhandled pixel fetcher state " << static_cast<uint16_t>(pixelFetchState) << std::endl;
                 break;
-            }
+            }*/
         }
         else {
-            modeCycles = -4;
+            haventDrawnYet = true;
+            modeCycles = -CYCLES_PER_INCREMENT;
             mode = PPUMode::H_BLANK;
             fetcherCycles = 0;
 
@@ -193,9 +217,6 @@ void PPU::tick() {
             if (statusRegister.hBlankInterrupt) {
                 requestInterrupt(STAT_INTERRUPT_FLAG);
             }
-
-            // write a line to frame buffer here
-            drawScanLine();
         }
         break;
     default:
@@ -208,9 +229,18 @@ void PPU::writeRegistersValues(uint16_t address) {
     switch (address) {
     case CONTROL_REG_ADDR:
         if (controlRegister.displayEnable && ((data & 0x80) == 0)) {
-            modeCycles = -4;
+            modeCycles = 0;
             mode = PPUMode::H_BLANK;
             ly = 0;
+            if (ly == lyc) {
+                if (statusRegister.lyCoincidenceInterrupt) {
+                    requestInterrupt(STAT_INTERRUPT_FLAG);
+                }
+                updateCoincidenceBit(true);
+            }
+            else {
+                updateCoincidenceBit(false);
+            }
             dontDrawFirstFrame = true;
         }
         controlRegister.displayEnable = data & 0x80;
@@ -242,6 +272,10 @@ void PPU::writeRegistersValues(uint16_t address) {
             if (statusRegister.lyCoincidenceInterrupt) {
                 requestInterrupt(STAT_INTERRUPT_FLAG);
             }
+            updateCoincidenceBit(true);
+        }
+        else {
+            updateCoincidenceBit(false);
         }
         break;
     case BGP_REG_ADDR:
@@ -332,4 +366,112 @@ uint8_t PPU::readRegisterValues(uint16_t address) {
     }
 
     return (*memory)[address];  
+}
+
+// Naive method to draw scan line until I get around to implementing pixel fetcher (todo)
+// Pushes entire scanline at once at end of data transfer phase
+void PPU::drawScanLine() {
+    bool inWindow = false;
+    if (controlRegister.windowDisplayEnable) {
+        if (wy <= ly) {
+            inWindow = true;
+        }
+    }
+
+    uint16_t tileDataAddr = dataStartValues[static_cast<uint8_t>(controlRegister.bgAndWindowTileDataSelect)];
+    bool unsignedOffset = controlRegister.bgAndWindowTileDataSelect;
+    uint16_t tileMapAddr = 0;
+
+    if (!inWindow) {
+        tileMapAddr = mapStartValues[static_cast<uint8_t>(controlRegister.bgTileMapDisplaySelect)];
+    }
+    else {
+        tileMapAddr = mapStartValues[static_cast<uint8_t>(controlRegister.windowTileMapSelect)];
+    }
+
+    uint8_t yPos = inWindow ? (ly - wy) : (scy + ly);
+    uint16_t tileRow = (static_cast<uint8_t>(yPos / 8) * 32);
+
+    for (uint8_t i = 0; i < WIDTH; ++i) {
+        uint8_t xPos = i + scx;
+
+        if (inWindow) {
+            if (i >= wx) {
+                xPos = i - wx;
+            }
+        }
+
+        uint16_t tileCol = xPos / 8;
+
+        uint16_t tileAddr = tileMapAddr + tileRow + tileCol;
+        
+        int16_t tileNum = unsignedOffset ? (*memory)[tileAddr] : static_cast<int8_t>((*memory)[tileAddr]);
+
+        uint16_t tileLocation = tileDataAddr + (unsignedOffset ? (tileNum * 16) : ((tileNum + 128) * 16));
+
+        uint8_t line = (yPos % 8) * 2;
+
+        uint8_t firstDataRow = (*memory)[tileLocation + line];
+        uint8_t secondDataRow = (*memory)[tileLocation + line + 1];
+        uint8_t colorBit = xPos % 8;
+        colorBit -= 7;
+        colorBit *= -1;
+
+        int32_t color = (getBitValue(secondDataRow, colorBit) << 1) | getBitValue(firstDataRow, colorBit);
+
+        if (ly < 0 || ly >= HEIGHT) {
+            continue;
+        }
+
+        frameBuffer[(i + (WIDTH * ly)) * 4] = bgPalette[color].first.r;
+        frameBuffer[(i + (WIDTH * ly)) * 4 + 1] = bgPalette[color].first.g;
+        frameBuffer[(i + (WIDTH * ly)) * 4 + 2] = bgPalette[color].first.b;
+        frameBuffer[(i + (WIDTH * ly)) * 4 + 3] = bgPalette[color].first.a;
+    }
+}
+
+void PPU::drawSprites() {
+    uint8_t ySize = controlRegister.objectSize ? 16 : 8;
+
+    for (auto& sprite : spritesForCurrLine) {
+        int32_t line = ly - sprite.y;
+
+        if (sprite.yFlip()) {
+            line -= ySize;
+            line *= -1;
+        }
+
+        line *= 2;
+        uint16_t spriteDataAddr = dataStartValues[1] + (sprite.tile * 16) + line;
+        uint8_t firstDataRow = (*memory)[spriteDataAddr];
+        uint8_t secondDataRow = (*memory)[spriteDataAddr + 1];
+
+        for (int8_t i = 7; i >= 0; --i) {
+            int8_t colorBit = i;
+
+            if (sprite.xFlip()) {
+                colorBit -= 7;
+                colorBit *= -1;
+            }
+
+            int32_t color = (getBitValue(secondDataRow, colorBit) << 1) | getBitValue(firstDataRow, colorBit);
+
+            sf::Color pixelColor = sprite.paletteNumber() ? ob1Palette[color].first : ob0Palette[color].first;
+            if (pixelColor == TRANSPARENT) {
+                continue;
+            }
+
+            int32_t xPos = -i + 7;
+            int32_t pixel = sprite.x + xPos;
+
+            if (ly < 0 || ly >= HEIGHT) {
+                continue;
+            }
+
+            frameBuffer[(pixel + (WIDTH * ly)) * 4] = pixelColor.r;
+            frameBuffer[(pixel + (WIDTH * ly)) * 4 + 1] = pixelColor.g;
+            frameBuffer[(pixel + (WIDTH * ly)) * 4 + 2] = pixelColor.b;
+            frameBuffer[(pixel + (WIDTH * ly)) * 4 + 3] = 255;
+        }
+    }
 }

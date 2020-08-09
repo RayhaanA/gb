@@ -3,6 +3,7 @@
 #include "../PPU/PPU.hpp"
 #include "../MMU/MMU.hpp"
 #include "Timers.hpp"
+#include "Joypad.hpp"
 #include <iostream>
 
 class CPU {
@@ -17,12 +18,20 @@ private:
     SpecialRegister PC, SP;
 
     bool interruptHandledThisTick = false;
+    bool dmaActive = false;
+    bool halted = false;
+    bool stopped = false;
+    bool enableInterruptsNextCycle = false; // There's a one cycle delay on enabling IME through EI instruction
+    uint16_t numBytesCopiedDuringDMA = 0;
+    uint16_t dmaSourceAddress = 0;
+
     uint32_t cycles = 0;
     uint32_t frameCycles = 0;
     bool frameDone = false;
     std::unique_ptr<MMU> memory;
     std::unique_ptr<PPU> ppu;
     std::unique_ptr<Timers> timers;
+    std::unique_ptr<Joypad> joypad;
 
     uint16_t currInstruction = 0;
 
@@ -174,10 +183,12 @@ private:
 
     uint8_t readMemoryAndIncrementCycles(uint16_t address) {
         // Can only access HRAM during DMA (todo: actually maybe not according to mooneye)
-        if (dmaActive && !memory->addressInHRAM(address)) {
-            return UNDEFINED_READ;
+       // if (dmaActive && !memory->addressInHRAM(address)) {
+        //    return UNDEFINED_READ;
+       // }
+        if (address == JOYPAD_REG_ADDR) {
+            return joypad->readJoypadState();
         }
-
         uint8_t data = memory->read(address, *ppu);
         incrementCycleCount();
         return data;
@@ -185,25 +196,20 @@ private:
 
     void writeMemoryAndIncrementCycles(uint8_t data, uint16_t address) {
         // Can only access HRAM during DMA
-        if (dmaActive && !memory->addressInHRAM(address)) {
-            return;
+        //if (dmaActive && !memory->addressInHRAM(address)) {
+        //    return;
+        //}
+        if (address == DMA_TRANSFER_ADDR) {
+            dmaSourceAddress = data << 8;
+            dmaActive = true;
         }
+
         memory->write(data, address, *ppu);
         incrementCycleCount();
     }
 
     // DMA routine
-    void dmaCopyByte() {
-        if (numBytesCopiedDuringDMA < 159) {
-            getMemory()[OAM_TABLE_ADDR + numBytesCopiedDuringDMA] = getMemory()[dmaSourceAddress + numBytesCopiedDuringDMA];
-            ++numBytesCopiedDuringDMA;
-        }
-        else {
-            getMemory()[OAM_TABLE_ADDR + numBytesCopiedDuringDMA] = getMemory()[dmaSourceAddress + numBytesCopiedDuringDMA];
-            dmaActive = false;
-            numBytesCopiedDuringDMA = 0;
-        }
-    }
+    void dmaCopyByte();
 
     // Bug that happens when doing stuff in 0xFE00 - 0xFEFF range during mode 2 of PPU
     bool oamBugShouldOccur(uint16_t address) { return ppu->getMode() == PPUMode::OAM_SEARCH && memory->addressInOAMBugRegion(address) && ppu->getDisplayEnabled(); }
@@ -215,9 +221,10 @@ private:
 
 public:
     CPU() = default;
-    explicit CPU(MMU* mmu, PPU* p, Timers* t) {
+    explicit CPU(MMU* mmu, PPU* p, Timers* t, Joypad* j) {
         memory = std::unique_ptr<MMU>(mmu);
         ppu = std::unique_ptr<PPU>(p);
+        joypad = std::unique_ptr<Joypad>(j);
         timers = std::unique_ptr<Timers>(t);
         pA = pF = pB = pC = pD = pE = pH = pL = 0;
         pPC = pSP = pAF =pBC = pDE = pHL = 0;
@@ -226,6 +233,7 @@ public:
         ppu.release();
         memory.release();
         timers.release();
+        joypad.release();
     }
 
     void callInstruction(uint16_t instruction);
@@ -269,6 +277,7 @@ public:
     uint16_t getSPPrev() const { return pSP; }
     uint16_t getPCPrev() const { return pPC; }
     uint16_t getCurrInstruction() const { return currInstruction; }
+    bool getHalted() const { return halted; }
 
     void reset() {
         A = F = B = C = D = E = H = L = 0;
@@ -279,12 +288,9 @@ public:
         stopped = false;
         halted = false;
         dmaActive = false;
-        numBytesCopiedDuringDMA = 0;
         enableInterruptsNextCycle = false;
-        timaInterruptRequest = false;
         wroteZeroToVBLIF = false;
         resetSysCounter = false;
-        dmaCycleCount = 0;
         numBytesCopiedDuringDMA = 0;
         dmaSourceAddress = 0;
         cycles = 0;

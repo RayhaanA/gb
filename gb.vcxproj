@@ -24,6 +24,7 @@
     <ClInclude Include="imgui_widgets\ImguiRegistersWindow.hpp" />
     <ClInclude Include="imgui_widgets\imgui_memory_editor.h" />
     <ClInclude Include="src\CPU\CPU.hpp" />
+    <ClInclude Include="src\CPU\Joypad.hpp" />
     <ClInclude Include="src\CPU\Opcodes.hpp" />
     <ClInclude Include="src\CPU\Registers.hpp" />
     <ClInclude Include="src\CPU\Timers.hpp" />
@@ -36,6 +37,7 @@
     <ClInclude Include="src\MMU\mmu.hpp" />
     <ClInclude Include="src\MMU\ROM.hpp" />
     <ClInclude Include="src\PPU\Display.hpp" />
+    <ClInclude Include="src\PPU\PixelFetcher.hpp" />
     <ClInclude Include="src\PPU\PPU.hpp" />
     <ClInclude Include="src\util\Disassembler.hpp" />
     <ClInclude Include="src\util\Logging.hpp" />
@@ -104,7 +106,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -158,6 +162,7 @@
       <SubSystem>NotSet</SubSystem>
       <AdditionalLibraryDirectories>$(ProjectDir)lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>vorbisenc.lib;vorbisfile.lib;vorbis.lib;ogg.lib;winmm.lib;flac.lib;gdi32.lib;freetype.lib;opengl32.lib;openal32.lib;sfml-system-s.lib;sfml-graphics-s.lib;sfml-window-s.lib;sfml-audio-s.lib;kernel32.lib;user32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

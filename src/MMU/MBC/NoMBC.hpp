@@ -13,9 +13,18 @@ public:
     uint8_t read(std::vector<uint8_t>& memory, uint16_t address, PPU& ppu) {
         switch (address & 0xF000) {
         case 0x0000: case 0x1000: case 0x2000: case 0x3000: case 0x4000:
-        case 0x5000: case 0x6000: case 0x7000: case 0x8000: case 0x9000:
-        case 0xC000: case 0xD000:
+        case 0x5000: case 0x6000: case 0x7000: case 0xC000: case 0xD000:
             return memory[address];
+            break;
+        case 0x8000: case 0x9000:
+            switch (ppu.getMode()) {
+            case PPUMode::OAM_SEARCH:
+                return UNDEFINED_READ;
+                break;
+            default:
+                return memory[address];
+                break;
+            }
             break;
         case 0xA000: case 0xB000:
             return (numRamBanks > 0 && ramEnable) ? memory[address] : UNDEFINED_READ;
@@ -43,7 +52,7 @@ public:
                     }
                 }
                 else {
-                    return 0;
+                    return UNDEFINED_READ;
                 }
                 break;
             case 0xF00:
@@ -80,12 +89,11 @@ public:
     }
 
     void write(std::vector<uint8_t>& memory, uint8_t data, uint16_t address, PPU& ppu) {
-        if (address == 0xFF01)
-            std::cout << data;
-
         switch (address & 0xF000) {
         case 0x0000: case 0x1000: case 0x2000: case 0x3000: case 0x4000:
-        case 0x5000: case 0x6000: case 0x7000: case 0x8000: case 0x9000:
+        case 0x5000: case 0x6000: case 0x7000: 
+            break;
+        case 0x8000: case 0x9000:
             memory[address] = data;
             break;
         case 0xA000: case 0xB000:
@@ -157,11 +165,10 @@ public:
                     switch (address & 0xF0) {
                     case 0x40:
                         if (address == LY_REG_ADDR && !ppu.getDisplayEnabled()) {
-
+                            break;
                         }
                         else if (address == DMA_TRANSFER_ADDR) {
-                            dmaSourceAddress = data << 8;
-                            dmaActive = true;
+                            memory[address] = data;
                         }
                         else if (address > 0xFF4B) {
                             memory[address] = data;

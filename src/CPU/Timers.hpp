@@ -14,6 +14,7 @@ class Timers {
     const uint32_t divOverflowPeriod = FREQUENCY / 64;
 
     std::unique_ptr<std::vector<uint8_t>> memory;
+    bool timaInterruptRequest = false;
 
 public:
     explicit Timers(std::vector<uint8_t>* m) {
@@ -72,5 +73,9 @@ public:
         divCounter = 0;
         resetSysCounter = false;
         timerCounter = 0;
+        timaInterruptRequest = false;
     }
+
+    bool getTIMAInterruptRequest() const { return timaInterruptRequest; }
+    void resetTIMAInterruptRequest() { timaInterruptRequest = false; }
 };

@@ -2,7 +2,7 @@
 #include "inttypes.h"
 
 static bool running = false;
-static bool skipBootRom = true;
+static bool skipBootRom = false;
 static bool needToRunBootRom = !skipBootRom;
 
 const uint8_t BOOT_ROM[256] = {
@@ -39,18 +39,12 @@ const size_t START_OF_ROM = 0x100;
 const uint32_t FREQUENCY = 4194304;
 const uint32_t CYCLES_PER_FRAME = 70224;
 const uint8_t CYCLES_PER_INCREMENT = 4;
-static bool enableInterruptsNextCycle = false; // There's a one cycle delay on enabling IME through EI instruction
-static bool timaInterruptRequest = false; // TIMA interrupt happens one cycle after overflow of TIMA   
+
 static bool IME = false; // Interrupt Master Enable Flag: Set through op codes
-static bool stopped = false;
-static bool halted = false;
 static bool wroteZeroToVBLIF = false;
 static bool ramEnable = false;
-static bool dmaActive = false;
 static bool resetSysCounter = false;
-static uint16_t dmaCycleCount = 0;
-static uint16_t numBytesCopiedDuringDMA = 0;
-static uint16_t dmaSourceAddress = 0;
+
 static uint8_t currSpriteIndex = 0;
 const uint8_t MAX_SPRITES = 40;
 const uint16_t SPRITE_BYTE_WIDTH = 4;
@@ -60,7 +54,7 @@ constexpr uint8_t N_FLAG = 1 << 6;
 constexpr uint8_t H_FLAG = 1 << 5;
 constexpr uint8_t C_FLAG = 1 << 4;
 
-const uint8_t TIMER_ENABLE_BIT = 1 << 2;
+constexpr uint8_t TIMER_ENABLE_BIT = 1 << 2;
 const uint8_t TIMER_INPUT_CLOCK_BITS = 0x3;
 
 constexpr uint8_t JOYPAD_INTERRUPT_FLAG = 1 << 4;
@@ -82,6 +76,7 @@ const uint16_t LAST_INTERRUPT_VECTOR = 0x60;
 const uint16_t INTERRUPT_VECTORS[] = { V_BLANK_INTERRUPT_VECTOR, LCDC_INTERRUPT_VECTOR, TIMER_INTERRUPT_VECTOR, SERIAL_INTERRUPT_VECTOR, LAST_INTERRUPT_VECTOR };
 
 const uint16_t OAM_TABLE_ADDR = 0xFE00;
+const uint16_t JOYPAD_REG_ADDR = 0xFF00;
 const uint16_t DIV_REG_ADDR = 0xFF04;
 const uint16_t TIMA_REG_ADDR = 0xFF05;
 const uint16_t TMA_REG_ADDR = 0xFF06;

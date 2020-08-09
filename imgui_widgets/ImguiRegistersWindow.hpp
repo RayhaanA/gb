@@ -52,7 +52,7 @@ struct RegistersWindow {
 
         ImGui::Text("Last I: %X", cpu.getCurrInstruction()); ImGui::NextColumn();
         ImGui::Text("IME: %d", IME); ImGui::NextColumn();
-        ImGui::Text("Halted: %d", halted); ImGui::NextColumn();
+        ImGui::Text("Halted: %d", cpu.getHalted()); ImGui::NextColumn();
         ImGui::Separator(); ImGui::Separator();
         ImGui::Text("Register"); ImGui::NextColumn();
         ImGui::Text("Value"); ImGui::NextColumn();

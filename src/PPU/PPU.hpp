@@ -28,6 +28,12 @@ enum class Color {
     BLACK
 };
 
+enum class PaletteID {
+    BGP,
+    OBP0,
+    OBP1
+};
+
 struct ControlRegister {
     bool displayEnable = false;
     bool windowTileMapSelect = false;
@@ -49,8 +55,10 @@ struct StatusRegister {
 
 struct Pixel {
     Color color = Color::WHITE;
-    uint8_t palette = 0;
+    PaletteID palette = PaletteID::BGP;
     bool bgPriority = false;
+
+    Pixel(Color c, uint8_t p, bool b) : color(c), palette(static_cast<PaletteID>(p)), bgPriority(b) {}
 };
 
 struct Sprite {
@@ -73,6 +81,11 @@ struct Sprite {
             return index < other.index;
         }
     }
+
+    bool hasPriorityOverBg() { return attributes & 0x80; }
+    bool yFlip() { return attributes & 0x40; }
+    bool xFlip() { return attributes & 0x20; }
+    bool paletteNumber() { return attributes & 0x10; }
 };
 
 class PPU {
@@ -96,6 +109,7 @@ class PPU {
     const uint16_t SPRITE_X_OFFSET = 8;
     const uint16_t MAX_SPRITES_PER_LINE = 10;
 
+    bool haventDrawnYet = true;
     bool dontDrawFirstFrame = false;
 
     ControlRegister controlRegister;
@@ -112,6 +126,7 @@ class PPU {
     std::queue<Pixel> oamFifo;
 
     std::vector<Sprite> spritesForCurrLine;
+    uint8_t currSpriteIndex = 0;
 
     // Pallettes
     sf::Color TRANSPARENT = sf::Color(0, 0, 0, 0);
@@ -126,16 +141,13 @@ class PPU {
 
     // Tile map addresses
     std::vector<uint16_t> mapStartValues = { 0x9800, 0x9C00 }; // Window/BG tile map ranges
-    std::vector<uint16_t> mapEndValues = { 0x9BFF, 0x9FFF };
 
     // VRAM key locations
     std::vector<uint16_t> dataStartValues = { 0x8800, 0x8000 }; // Window/BG tile data ranges
-    std::vector<uint16_t> dataEndValues = { 0x97FF, 0x8FFF };
 
     // Frame to draw on
     std::vector<uint8_t> frameBuffer;
     sf::Texture frame;
-    uint8_t xPos = 0;
 
     bool displayIsBlank = true;
 
@@ -162,8 +174,8 @@ class PPU {
     }
 
     bool spriteIsVisible(uint16_t spriteAddress) {
-        uint8_t x = (*memory)[spriteAddress];
-        uint8_t y = (*memory)[spriteAddress + 1];
+        uint8_t y = (*memory)[spriteAddress];
+        uint8_t x = (*memory)[spriteAddress + 1];
         
         return y <= (ly + SPRITE_Y_OFFSET) &&
             (ly + SPRITE_Y_OFFSET) < (y + (controlRegister.objectSize ? 16 : 8)) &&
@@ -171,11 +183,13 @@ class PPU {
     }
 
     Sprite createSprite(uint16_t address, uint8_t index) {
-        return { (*memory)[address], (*memory)[address + 1], (*memory)[address + 2], (*memory)[address + 3], index };
+        return { static_cast<uint8_t>((*memory)[address] - 16), static_cast<uint8_t>((*memory)[address + 1] - 8),
+            (*memory)[address + 2], (*memory)[address + 3], index };
     }
 
-    void drawScanLine() {}
-    void pushFrame() {}
+    void drawScanLine();
+    void drawSprites();
+    void pushFrame() { frame.update(frameBuffer.data()); }
     void resetLY();
     void incrementLY();
     void tick();
@@ -230,7 +244,6 @@ public:
         fetcherCycles = 0;
         pixelFetcherX = 0;
         pixelFetcherY = 0;
-        currSpriteIndex = 0;
     }
 
     void incrementCycleCount() {
@@ -264,6 +277,7 @@ public:
     uint8_t getLCDC() { return readRegisterValues(CONTROL_REG_ADDR); }
     uint8_t getSTAT() { return readRegisterValues(STATUS_REG_ADDR); }
     sf::Texture& getFrame() { return frame; }
+    uint8_t getCurrSpriteIndex() { return currSpriteIndex; }
 
     bool getDisplayEnabled() { return (getLCDC() & 0x80); }
     void write(uint8_t data, uint16_t address) { (*memory)[address] = data; }

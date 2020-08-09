@@ -5,6 +5,7 @@
 #include "PPU/Display.hpp"
 #include "CPU/CPU.hpp"
 #include "PPU/PPU.hpp"
+#include "CPU/Joypad.hpp"
 #include "util/ParseBinFile.hpp"
 #include "util/Disassembler.hpp"
 #include "ImguiDisassemblyViewer.hpp"
@@ -28,7 +29,7 @@ void reset(CPU& cpu, MMU& mmu, PPU& ppu, std::vector<uint8_t>& rom) {
 }
 
 int main() {
-    std::vector<uint8_t> rom = util::parseRomFile("./roms/blargg_tests/instr_timing.gb");
+    std::vector<uint8_t> rom = util::parseRomFile("./roms/tetris.gb");
     
     MMU mmu(rom);
 
@@ -40,7 +41,8 @@ int main() {
 
     Timers timers(&mmu.getMemory());
     PPU ppu(&mmu.getMemory(), &display);
-    CPU cpu(&mmu, &ppu, &timers);
+    Joypad joypad(&mmu);
+    CPU cpu(&mmu, &ppu, &timers, &joypad);
 
     static MemoryEditor memEdit;
     
@@ -57,8 +59,7 @@ int main() {
 
     //cpu.runUntilCompletion();
     int i = 0;
-    while (display.isOpen())
-    {
+    while (display.isOpen()) {
         sf::Event event;
         while (display.pollEvent(event))
         {
@@ -82,7 +83,31 @@ int main() {
                 case sf::Keyboard::F3:
                     skipBootRom = !skipBootRom;
                     break;
+                case sf::Keyboard::Z:
+                case sf::Keyboard::X:
+                case sf::Keyboard::Enter:
+                case sf::Keyboard::BackSpace:
+                case sf::Keyboard::Right:
+                case sf::Keyboard::Left:
+                case sf::Keyboard::Up:
+                case sf::Keyboard::Down:
+                    joypad.pressKey(event.key.code);
+                    break;
                 default:
+                    break;
+                }
+            }
+            else if (event.type == sf::Event::KeyReleased) {
+                switch (event.key.code) {
+                case sf::Keyboard::Z:
+                case sf::Keyboard::X:
+                case sf::Keyboard::Enter:
+                case sf::Keyboard::BackSpace:
+                case sf::Keyboard::Right:
+                case sf::Keyboard::Left:
+                case sf::Keyboard::Up:
+                case sf::Keyboard::Down:
+                    joypad.releaseKey(event.key.code);
                     break;
                 }
             }
@@ -100,7 +125,6 @@ int main() {
 
         memEdit.drawWindow("Memory Editor", mmu.getMemory().data(), 0x10000, 0x0000);
         disassemblyViewer.drawWindow(cpu);
-        //ImGui::ShowDemoWindow();
         regWindow.drawWindow(cpu);
         ppuStateWindow.drawWindow(ppu);
         display.render(ppu.getFrame());

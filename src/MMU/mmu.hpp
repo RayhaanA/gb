@@ -45,7 +45,7 @@ public:
         for (size_t i = 0; i < BOOT_ROM_SIZE; ++i) {
             bootAreaRemap[i] = rom[i];
         }
-        for (size_t i = BOOT_ROM_SIZE; i < rom.size(); ++i) {
+        for (size_t i = BOOT_ROM_SIZE; i < MEMORY_SIZE; ++i) {
             memory[i] = rom[i];
         }
 
@@ -63,6 +63,7 @@ public:
             mbc = std::unique_ptr<MemoryController>(new MBC1(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
             break;
         default:
+            mbc = std::unique_ptr<MemoryController>(new MBC1(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
             break;
         }
 
