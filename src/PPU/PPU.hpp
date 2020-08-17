@@ -4,7 +4,7 @@
 #include "Display.hpp"
 #include "../Globals.hpp"
 #include <iostream>
-#include <queue>
+#include <deque>
 
 enum class PPUMode {
     H_BLANK,
@@ -13,12 +13,17 @@ enum class PPUMode {
     DATA_TRANSFER
 };
 
-enum class PixelFetchState {
+enum class PixelFetcherState {
     GET_TILE_ID,
     GET_TILE_DATA_LOW,
     GET_TILE_DATA_HIGH,
     SLEEP,
-    PUSH
+    PUSH,
+    GET_SPRITE_TILE_ID,
+    GET_SPRITE_FLAGS,
+    GET_SPRITE_DATA_LOW,
+    GET_SPRITE_DATA_HIGH,
+    PUSH_SPRITE
 };
 
 enum class Color {
@@ -54,19 +59,29 @@ struct StatusRegister {
 };
 
 struct Pixel {
-    Color color = Color::WHITE;
+    uint8_t color = 0;
     PaletteID palette = PaletteID::BGP;
     bool bgPriority = false;
-
-    Pixel(Color c, uint8_t p, bool b) : color(c), palette(static_cast<PaletteID>(p)), bgPriority(b) {}
+    Pixel() {
+        color = 0, palette = PaletteID::BGP, bgPriority = false;
+    }
+    Pixel(uint8_t c, uint8_t p, bool b) : color(c), palette(static_cast<PaletteID>(p)), bgPriority(b) {}
 };
 
 struct Sprite {
-    uint8_t y;
-    uint8_t x;
-    uint8_t tile;
-    uint8_t attributes;
-    uint8_t index;
+    uint8_t y = 0;
+    uint8_t x = 0;
+    uint8_t tile = 0;
+    uint8_t attributes = 0;
+    uint8_t index = 0;
+
+    Sprite() {
+        y = 0;
+        x = 0;
+        tile = 0;
+        attributes = 0;
+        index = 0;
+    }
 
     Sprite(uint8_t ypos, uint8_t xpos, uint8_t t, uint8_t a, uint8_t i) :
         y(ypos), x(xpos), tile(t), attributes(a), index(i) {}
@@ -82,7 +97,7 @@ struct Sprite {
         }
     }
 
-    bool hasPriorityOverBg() { return attributes & 0x80; }
+    bool hasPriorityOverBg() { return !(attributes & 0x80); }
     bool yFlip() { return attributes & 0x40; }
     bool xFlip() { return attributes & 0x20; }
     bool paletteNumber() { return attributes & 0x10; }
@@ -100,31 +115,55 @@ class PPU {
     uint8_t scx = 0; // Curr scroll x
     uint8_t scy = 0; // Curr scroll y
 
-    const uint16_t H_BLANK_CYCLES = 204;
+    // H-blank and data transfer can be variable length depending on number of sprites and 
+    // how much fifos need to fill up. They default to the given numbers
+    uint16_t H_BLANK_CYCLES = 204;
+    uint16_t DATA_TRANSFER_CYCLES = 172;
+    uint16_t ACTUAL_DATA_TRANSFER_CYCLES_FOR_LINE = 0;
+    uint16_t ACTUAL_H_BLANK_CYCLES_FOR_LINE = 204;
+
     const uint16_t V_BLANK_CYCLES = 456;
     const uint16_t OAM_SEARCH_CYCLES = 80;
-    const uint16_t DATA_TRANSFER_CYCLES = 172;
     const uint16_t WX_OFFSET = 7;
     const uint16_t SPRITE_Y_OFFSET = 16;
     const uint16_t SPRITE_X_OFFSET = 8;
     const uint16_t MAX_SPRITES_PER_LINE = 10;
 
+    bool finishedRenderingLine = false;
     bool haventDrawnYet = true;
     bool dontDrawFirstFrame = false;
 
     ControlRegister controlRegister;
     StatusRegister statusRegister;
     PPUMode mode = PPUMode::OAM_SEARCH;
-    PixelFetchState pixelFetchState = PixelFetchState::GET_TILE_ID;
+
+    // Drawing x pos
+    uint8_t x = 0;
+
+    // Window active
+    bool window = false;
 
     // Fetcher data
-    uint8_t fetcherCycles = 0;
-    uint8_t pixelFetcherX = 0;
-    uint8_t pixelFetcherY = 0;
+    PixelFetcherState fetcherState = PixelFetcherState::GET_TILE_ID;
+    uint8_t fetcherCycles = 2;
     uint8_t tileID = 0;
-    std::queue<Pixel> bgFifo;
-    std::queue<Pixel> oamFifo;
+    uint16_t mapAddress = 0;
+    uint16_t tileDataAddress = 0;
+    uint8_t xOffset = 0;
+    bool signedTileID = false;
+    uint8_t tileLine = 0;
+    std::deque<Pixel> bgFifo;
+    uint8_t tileDataLow = 0;
+    uint8_t tileDataHigh = 0;
+    bool disableFetcher = false;
+    uint8_t skippedPixels = 0;
+    Sprite currSprite;
+    uint8_t spriteTileLine = 0;
+    int16_t spriteOffset = 0;
+    uint8_t spriteIndex = 0;
+    uint8_t spriteAttributes = 0;
 
+    // Sprite look up
     std::vector<Sprite> spritesForCurrLine;
     uint8_t currSpriteIndex = 0;
 
@@ -159,8 +198,21 @@ class PPU {
         }
     }
 
-    sf::Color getColor(Color c) {
-        return PALETTE[static_cast<size_t>(c)];
+    sf::Color getColor(Pixel& p) {
+        switch (p.palette) {
+        case PaletteID::BGP:
+            return bgPalette[p.color].first;
+            break;
+        case PaletteID::OBP0:
+            return ob0Palette[p.color].first;
+            break;
+        case PaletteID::OBP1:
+            return ob1Palette[p.color].first;
+            break;
+        default:
+            return TRANSPARENT;
+            break;
+        }
     }
 
     void updateCoincidenceBit(bool set) {
@@ -183,10 +235,17 @@ class PPU {
     }
 
     Sprite createSprite(uint16_t address, uint8_t index) {
-        return { static_cast<uint8_t>((*memory)[address] - 16), static_cast<uint8_t>((*memory)[address + 1] - 8),
+        return { static_cast<uint8_t>((*memory)[address]), static_cast<uint8_t>((*memory)[address + 1]),
             (*memory)[address + 2], (*memory)[address + 3], index };
     }
 
+    // Fetcher functions
+    void tickFetcher();
+    void addSpriteToFetcher(Sprite& s, int16_t offset);
+    uint8_t readTileData(uint8_t tileId, uint8_t line, uint8_t byteNumber, uint16_t tileDataAddress, 
+        bool signedID, uint8_t attributes, uint8_t tileHeight);
+
+    void drawBlankLine();
     void drawScanLine();
     void drawSprites();
     void pushFrame() { frame.update(frameBuffer.data()); }
@@ -240,10 +299,6 @@ public:
         controlRegister = {};
         statusRegister = {};
         mode = PPUMode::OAM_SEARCH;
-        pixelFetchState = PixelFetchState::GET_TILE_ID;
-        fetcherCycles = 0;
-        pixelFetcherX = 0;
-        pixelFetcherY = 0;
     }
 
     void incrementCycleCount() {

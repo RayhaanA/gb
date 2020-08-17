@@ -44,6 +44,7 @@ static bool IME = false; // Interrupt Master Enable Flag: Set through op codes
 static bool wroteZeroToVBLIF = false;
 static bool ramEnable = false;
 static bool resetSysCounter = false;
+static bool dmaActive = false;
 
 static uint8_t currSpriteIndex = 0;
 const uint8_t MAX_SPRITES = 40;

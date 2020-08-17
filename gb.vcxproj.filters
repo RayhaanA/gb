@@ -78,10 +78,10 @@
     <ClInclude Include="src\MMU\MBC\MBC1.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\PPU\PixelFetcher.hpp">
+    <ClInclude Include="src\CPU\Joypad.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\CPU\Joypad.hpp">
+    <ClInclude Include="src\MMU\MBC\MBC3.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -8,6 +8,7 @@
 #include "../util/ParseBinFile.hpp"
 #include "MBC/NoMBC.hpp"
 #include "MBC/MBC1.hpp"
+#include "MBC/MBC3.hpp"
 
 class MMU
 {
@@ -62,6 +63,8 @@ public:
         case 0x3:
             mbc = std::unique_ptr<MemoryController>(new MBC1(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
             break;
+        case 0x13:
+            mbc = std::unique_ptr<MemoryController>(new MBC3(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
         default:
             mbc = std::unique_ptr<MemoryController>(new MBC1(&rom, memory[CART_HEADER_ROM_SIZE], memory[CART_HEADER_RAM_SIZE]));
             break;

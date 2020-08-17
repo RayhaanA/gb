@@ -29,7 +29,7 @@ void reset(CPU& cpu, MMU& mmu, PPU& ppu, std::vector<uint8_t>& rom) {
 }
 
 int main() {
-    std::vector<uint8_t> rom = util::parseRomFile("./roms/tetris.gb");
+    std::vector<uint8_t> rom = util::parseRomFile("./roms/pm.gb");
     
     MMU mmu(rom);
 

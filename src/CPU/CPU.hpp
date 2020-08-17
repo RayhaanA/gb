@@ -18,7 +18,7 @@ private:
     SpecialRegister PC, SP;
 
     bool interruptHandledThisTick = false;
-    bool dmaActive = false;
+    // bool dmaActive = false;
     bool halted = false;
     bool stopped = false;
     bool enableInterruptsNextCycle = false; // There's a one cycle delay on enabling IME through EI instruction

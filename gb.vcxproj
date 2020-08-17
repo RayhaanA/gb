@@ -32,12 +32,12 @@
     <ClInclude Include="src\MBC\MemoryController.hpp" />
     <ClInclude Include="src\MBC\NoMBC.hpp" />
     <ClInclude Include="src\MMU\MBC\MBC1.hpp" />
+    <ClInclude Include="src\MMU\MBC\MBC3.hpp" />
     <ClInclude Include="src\MMU\MBC\MemoryController.hpp" />
     <ClInclude Include="src\MMU\MBC\NoMBC.hpp" />
     <ClInclude Include="src\MMU\mmu.hpp" />
     <ClInclude Include="src\MMU\ROM.hpp" />
     <ClInclude Include="src\PPU\Display.hpp" />
-    <ClInclude Include="src\PPU\PixelFetcher.hpp" />
     <ClInclude Include="src\PPU\PPU.hpp" />
     <ClInclude Include="src\util\Disassembler.hpp" />
     <ClInclude Include="src\util\Logging.hpp" />

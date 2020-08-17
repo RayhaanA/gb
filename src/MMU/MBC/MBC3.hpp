@@ -3,25 +3,21 @@
 #include <vector>
 #include <iostream>
 
-class MBC1 : public MemoryController {
+class MBC3 : public MemoryController {
 private:
     bool defaultMode = true;
-    bool largeCart = false;
+    bool enableRTC = false;
     std::vector<std::vector<uint8_t>> externalRam;
-
 public:
-    MBC1(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo) : MemoryController(r, romInfo, ramInfo) {
+    MBC3(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo) : MemoryController(r, romInfo, ramInfo) {
         ramEnable = false;
-        if (romSize > 1024_KB) {
-            largeCart = true;
-        }
         if (numRamBanks > 1) {
             for (size_t i = 0; i < numRamBanks - 1; ++i) {
                 externalRam.push_back(std::vector<uint8_t>(8_KB, 0));
             }
         }
     }
-    ~MBC1() = default;
+    ~MBC3() = default;
 
     uint8_t read(std::vector<uint8_t>& memory, uint16_t address, PPU& ppu) {
         switch (address & 0xF000) {
@@ -40,10 +36,10 @@ public:
             }
             break;
         case 0x4000: case 0x5000: case 0x6000: case 0x7000:
-            return (*rom)[address + romSize / numRomBanks * static_cast<size_t>((romBank % numRomBanks)- 1)];
+            return (*rom)[address + romSize / numRomBanks * static_cast<size_t>((romBank % numRomBanks) - 1)];
         case 0xA000: case 0xB000:
             if (numRamBanks > 0 && ramEnable) {
-                if (ramBank == 0 || defaultMode) {
+                if (ramBank == 0) {
                     return memory[address];
                 }
                 else {
@@ -117,46 +113,36 @@ public:
         switch (address & 0xF000) {
         case 0x0000: case 0x1000:
             if ((data & 0xF) == 0xA) {
-                ramEnable = true;;
+                ramEnable = true;
+                enableRTC = true;
             }
             else {
                 ramEnable = false;
+                enableRTC = false;
             }
             break;
-        case 0x2000: case 0x3000: 
-            if (data == 0x0) {
-                data = 0x1;
-            }
-            romBank = romBank & (~0x1F) | (data & 0x1F);
-            break;
-        case 0x4000: case 0x5000: 
-            if (defaultMode) {
-                romBank = romBank & 0x1F | ((data & 0x3) << 5);
+        case 0x2000: case 0x3000:
+            if (data == 0) {
+                romBank = 1;
             }
             else {
-                ramBank = data & 0x3;
+                romBank = data & 0x7F;
             }
+            break;
+        case 0x4000: case 0x5000:
+            ramBank = data;
             break;
         case 0x6000: case 0x7000:
-            if (data == 0x0) {
-                defaultMode = true;
-                ramBank = 0;
-            }
-            else if (data == 0x1) {
-                defaultMode = false;
-                // In RAM banking mode, upper 2 bits of ROM bank are inaccessible
-                romBank &= 0x1F;
-            }
-            break;
         case 0x8000: case 0x9000:
             memory[address] = data;
             break;
         case 0xA000: case 0xB000:
             if (numRamBanks > 0 && ramEnable) {
-                if (ramBank == 0 || defaultMode) {
+                if (ramBank == 0) {
                     memory[address] = data;
                 }
                 else {
+                    std::cout << "wrote to external ram bank\n";
                     externalRam[ramBank - 1][address] = data;
                 }
             }
