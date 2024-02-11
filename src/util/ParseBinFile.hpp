@@ -1,35 +1,34 @@
 #pragma once
-#include <vector>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 namespace util {
-    static std::vector<uint8_t> parseRomFile(std::string filepath) {
-        std::ifstream romFile;
-        romFile.exceptions(std::ifstream::badbit);
+static std::vector<uint8_t> parseRomFile(std::string filepath) {
+  std::ifstream romFile;
+  romFile.exceptions(std::ifstream::badbit);
 
-        try {
-            romFile.open(filepath, std::ios::binary);
-            romFile.unsetf(std::ios::skipws);
+  try {
+    romFile.open(filepath, std::ios::binary);
+    romFile.unsetf(std::ios::skipws);
 
-            romFile.seekg(0, std::ios::end);
-            std::streampos length = romFile.tellg();
-            romFile.seekg(0, std::ios::beg);
+    romFile.seekg(0, std::ios::end);
+    std::streampos length = romFile.tellg();
+    romFile.seekg(0, std::ios::beg);
 
-            std::vector<uint8_t> rom;
-            rom.reserve(length);
+    std::vector<uint8_t> rom;
+    rom.reserve(length);
 
-            rom.insert(rom.begin(), std::istream_iterator<uint8_t>(romFile),
-                std::istream_iterator<uint8_t>());
+    rom.insert(rom.begin(), std::istream_iterator<uint8_t>(romFile),
+               std::istream_iterator<uint8_t>());
 
-            romFile.close();
+    romFile.close();
 
-            return rom;
-        }
-        catch (const std::ifstream::failure& e) {
-            std::cerr << "Exception opening/reading/closing file " << e.what() << "\n";
-        }
+    return rom;
+  } catch (const std::ifstream::failure& e) {
+    std::cerr << "Exception opening/reading/closing file " << e.what() << "\n";
+  }
 
-        return {};
-    }
+  return {};
 }
+}  // namespace util

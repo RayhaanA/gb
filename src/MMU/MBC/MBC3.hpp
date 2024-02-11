@@ -4,16 +4,16 @@
 
 #include "MemoryController.hpp"
 
-class MBC1 : public MemoryController {
+class MBC3 : public MemoryController {
  private:
   bool defaultMode = true;
 
  public:
-  MBC1(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo)
+  MBC3(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo)
       : MemoryController(r, romInfo, ramInfo) {
     Globals::ramEnable = false;
   }
-  ~MBC1() = default;
+  ~MBC3() = default;
 
   uint8_t read(std::vector<uint8_t>& memory, uint16_t address, PPU& ppu) {
     switch (address & 0xF000) {
@@ -141,13 +141,7 @@ class MBC1 : public MemoryController {
         if (data == 0x0) {
           data = 0x1;
         }
-        uint8_t romBankNumber = data & 0x1F;
-        if (romBankNumber > numRomBanks) {
-          romBankNumber = romBankNumber & romBankMask;
-        }
-        if (romBankNumber == 0x20) romBankNumber = 0x21;
-        else if (romBankNumber == 0x40) romBankNumber = 0x41;
-        else if (romBankNumber == 0x60) romBankNumber = 0x61;
+        uint8_t romBankNumber = data & 0x3F;
         romBank = romBankNumber;
         break;
       }
@@ -156,7 +150,11 @@ class MBC1 : public MemoryController {
         if (defaultMode && romSize >= 1024_KB) {
           romBank = ((data & 0x3) << 5) + romBank;
         } else if (!defaultMode && ramSize >= 32_KB) {
-          ramBank = data & 0x3;
+          uint8_t ramBank = data & 0x0F;
+          if (data <= 0x03)
+            ramBank = data;
+          else if (data <= 0x0C)
+            throw std::runtime_error("RTC Unsupported");
         }
         break;
       case 0x6000:
