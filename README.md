@@ -16,6 +16,6 @@ Todo:
 * Corner cases (STAT IRQ quirks, interesting memory access patterns, etc.) Essentially certain aspects of the system that aren't necessary for the majority of games to run
 * gbc support (long-term)
 
-![Image of Emulator](https://i.imgur.com/xcySfEz.png)
+![Image of Emulator](https://i.imgur.com/uKTaymE.png)
 
 ![Another Image of Emulator](https://i.imgur.com/VkR8seN.png)
