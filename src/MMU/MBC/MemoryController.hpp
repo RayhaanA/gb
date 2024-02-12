@@ -6,7 +6,7 @@
 
 class MemoryController {
  protected:
-  std::unique_ptr<std::vector<uint8_t>> rom;
+  std::shared_ptr<std::vector<uint8_t>> rom;
   size_t romSize = 0;
   uint16_t numRomBanks = 0;
   size_t ramSize = 0;
@@ -27,7 +27,7 @@ class MemoryController {
                             uint8_t ramInfo, bool battery, std::string file) {
     hasBattery = battery;
     ramFile = file;
-    rom = std::unique_ptr<std::vector<uint8_t>>(r);
+    rom = std::shared_ptr<std::vector<uint8_t>>(r);
     romSize = BASE_ROM_SIZE << romInfo;
     numRomBanks = 2 << romInfo;
     while (romBankMask < numRomBanks) {
@@ -57,7 +57,7 @@ class MemoryController {
     }
     std::cout << "Rom size " << romSize << "\nRam size " << ramSize << "\n";
   }
-  ~MemoryController() { rom.release(); }
+  ~MemoryController() { rom.reset(); }
   virtual uint8_t read(std::vector<uint8_t>& memory, uint16_t address,
                        PPU& ppu) = 0;
   virtual void write(std::vector<uint8_t>& memory, uint8_t data,
@@ -71,7 +71,11 @@ class MemoryController {
     if (savedRam.size() < 8_KB) {
       return;
     }
-    for (int i = 0; i <= 16_KB; ++i) {
+
+    for (int i = 0; i < savedRam.size(); ++i) {
+      if (i >= 16_KB) {
+        break;
+      }
       memory[0xA000 + i] = savedRam[i];
     }
   }

@@ -478,10 +478,10 @@ void PPU::drawSprites() {
         continue;
       }
 
-      frameBuffer[(pixel + (Display::WIDTH * ly)) * 4] = pixelColor.r;
-      frameBuffer[(pixel + (Display::WIDTH * ly)) * 4 + 1] = pixelColor.g;
-      frameBuffer[(pixel + (Display::WIDTH * ly)) * 4 + 2] = pixelColor.b;
-      frameBuffer[(pixel + (Display::WIDTH * ly)) * 4 + 3] = 255;
+      frameBuffer[((pixel + (Display::WIDTH * ly)) * 4) % frameBuffer.size()] = pixelColor.r;
+      frameBuffer[((pixel + (Display::WIDTH * ly)) * 4 + 1) % frameBuffer.size()] = pixelColor.g;
+      frameBuffer[((pixel + (Display::WIDTH * ly)) * 4 + 2) % frameBuffer.size()] = pixelColor.b;
+      frameBuffer[((pixel + (Display::WIDTH * ly)) * 4 + 3) % frameBuffer.size()] = 255;
     }
   }
 }

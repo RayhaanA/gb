@@ -30,7 +30,7 @@ class MMU {
   */
   std::vector<uint8_t> bootAreaRemap;
   std::vector<uint8_t> memory;
-  std::vector<uint8_t> rom;
+  std::shared_ptr<std::vector<uint8_t>> rom;
   std::string file;
 
   std::unique_ptr<MemoryController> mbc;
@@ -68,66 +68,66 @@ class MMU {
 
  public:
   MMU() = default;
-  explicit MMU(std::vector<uint8_t> r, std::string f) : rom(r), file(f) {
+  explicit MMU(std::vector<uint8_t>* r, std::string f) : rom(std::shared_ptr<std::vector<uint8_t>>(r)), file(f) {
     bootAreaRemap = std::vector<uint8_t>(BOOT_ROM_SIZE);
     memory = std::vector<uint8_t>(MEMORY_SIZE);
     for (size_t i = 0; i < BOOT_ROM_SIZE; ++i) {
       memory[i] = BOOT_ROM[i];
     }
     for (size_t i = 0; i < BOOT_ROM_SIZE; ++i) {
-      bootAreaRemap[i] = rom[i];
+      bootAreaRemap[i] = rom->at(i);
     }
     for (size_t i = BOOT_ROM_SIZE; i < MEMORY_SIZE; ++i) {
-      memory[i] = rom[i];
+      memory[i] = rom->at(i);
     }
 
     switch (memory[CART_HEADER_MBC]) {
       case 0x0:
         std::cout << "No MBC\n";
         mbc = std::unique_ptr<MemoryController>(
-            new NoMBC(&rom, memory[CART_HEADER_ROM_SIZE],
+            new NoMBC(&(*rom), memory[CART_HEADER_ROM_SIZE],
                       memory[CART_HEADER_RAM_SIZE], file));
         break;
       case 0x1:
         std::cout << "MBC1\n";
         mbc = std::unique_ptr<MemoryController>(
-            new MBC1(&rom, memory[CART_HEADER_ROM_SIZE],
+            new MBC1(&(*rom), memory[CART_HEADER_ROM_SIZE],
                      memory[CART_HEADER_RAM_SIZE], false, file));
         break;
       case 0x2:
         std::cout << "MBC1 with RAM\n";
         mbc = std::unique_ptr<MemoryController>(
-            new MBC1(&rom, memory[CART_HEADER_ROM_SIZE],
+            new MBC1(&(*rom), memory[CART_HEADER_ROM_SIZE],
                      memory[CART_HEADER_RAM_SIZE], false, file));
         break;
       case 0x3:
         std::cout << "MBC1 with RAM and battery\n";
         mbc = std::unique_ptr<MemoryController>(
-            new MBC1(&rom, memory[CART_HEADER_ROM_SIZE],
+            new MBC1(&(*rom), memory[CART_HEADER_ROM_SIZE],
                      memory[CART_HEADER_RAM_SIZE], true, file));
         break;
       case 0x11:
         std::cout << "MBC3\n";
         mbc = std::unique_ptr<MemoryController>(
-            new MBC3(&rom, memory[CART_HEADER_ROM_SIZE],
+            new MBC3(&(*rom), memory[CART_HEADER_ROM_SIZE],
                      memory[CART_HEADER_RAM_SIZE], false, file));
         break;
       case 0x12:
         std::cout << "MBC3 with RAM\n";
         mbc = std::unique_ptr<MemoryController>(
-            new MBC3(&rom, memory[CART_HEADER_ROM_SIZE],
+            new MBC3(&(*rom), memory[CART_HEADER_ROM_SIZE],
                      memory[CART_HEADER_RAM_SIZE], false, file));
         break;
       case 0x13:
         std::cout << "MBC3 with RAM and battery\n";
         mbc = std::unique_ptr<MemoryController>(
-            new MBC3(&rom, memory[CART_HEADER_ROM_SIZE],
+            new MBC3(&(*rom), memory[CART_HEADER_ROM_SIZE],
                      memory[CART_HEADER_RAM_SIZE], true, file));
         mbc->readRamFromFile(memory);
         break;
       default:
         mbc = std::unique_ptr<MemoryController>(
-            new NoMBC(&rom, memory[CART_HEADER_ROM_SIZE],
+            new NoMBC(&(*rom), memory[CART_HEADER_ROM_SIZE],
                       memory[CART_HEADER_RAM_SIZE], file));
         break;
     }
@@ -135,6 +135,7 @@ class MMU {
   ~MMU() {
     mbc->writeRamToFile(memory);
     mbc.reset();
+    rom.reset();
   }
 
   static const size_t START_OF_ROM = 0x100;
@@ -184,15 +185,9 @@ class MMU {
       memory[i] = BOOT_ROM[i];
     }
     for (size_t i = BOOT_ROM_SIZE; i < MEMORY_SIZE; ++i) {
-      memory[i] = rom[i];
+      memory[i] = rom->at(i);
     }
     mbc->readRamFromFile(memory);
-  }
-
-  void loadRom(std::vector<uint8_t> rom) {
-    for (size_t i = 0; i < MEMORY_SIZE; ++i) {
-      memory[i] = rom[i];
-    }
   }
 
   bool addressInHRAM(uint16_t address) {

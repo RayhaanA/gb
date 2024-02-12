@@ -4,7 +4,7 @@
 #include "../MMU/mmu.hpp"
 
 class Joypad {
-  std::unique_ptr<MMU> memory;
+  std::shared_ptr<MMU> memory;
   const uint8_t DEFAULT_JOYPAD_VALUE = 0xFF;
   enum class JoypadButtons {
     JOYPAD_RIGHT,
@@ -24,8 +24,8 @@ class Joypad {
 
  public:
   Joypad() = delete;
-  explicit Joypad(MMU* mmu) { memory = std::unique_ptr<MMU>(mmu); }
-  ~Joypad() { memory.release(); }
+  explicit Joypad(MMU* mmu) { memory = std::shared_ptr<MMU>(mmu); }
+  ~Joypad() { memory.reset(); }
 
   uint8_t readJoypadState() {
     uint8_t currValue = memory->getMemory()[Address::JOYPAD_REG_ADDR];

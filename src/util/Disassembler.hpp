@@ -21,7 +21,7 @@ int32_t make16Wide(std::vector<uint8_t>& rom, int32_t& i) {
 }
 
 std::pair<std::vector<std::string>, std::unordered_map<uint16_t, int32_t>>
-disassemble(std::vector<uint8_t> rom) {
+disassemble(std::vector<uint8_t>& rom) {
   std::vector<std::string> lines;
   std::unordered_map<uint16_t, int32_t> map;
   uint16_t pc = 0;

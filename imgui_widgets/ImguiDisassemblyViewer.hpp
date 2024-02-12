@@ -14,7 +14,7 @@ struct DisassemblyViewer {
 
   DisassemblyViewer() = delete;
   DisassemblyViewer(
-      std::pair<std::vector<std::string>, std::unordered_map<uint16_t, int32_t>>
+      std::pair<std::vector<std::string>, std::unordered_map<uint16_t, int32_t>>&&
           d)
       : disassemblyList(std::move(d.first)), indexMap(std::move(d.second)) {}
 

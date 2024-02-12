@@ -76,7 +76,7 @@ struct Sprite {
 };
 
 class PPU {
-  std::unique_ptr<std::vector<uint8_t>> memory;
+  std::shared_ptr<std::vector<uint8_t>> memory;
   std::unique_ptr<Display> display;
 
   uint16_t modeCycles = 0;  // Cycles in current ppu mode
@@ -136,7 +136,7 @@ class PPU {
       0x8800, 0x8000};  // Window/BG tile data ranges
 
   // Frame to draw on
-  std::vector<uint8_t> frameBuffer;
+  std::vector<uint8_t> frameBuffer = std::vector<uint8_t>(Display::WIDTH * Display::HEIGHT * 4);
   sf::Texture frame;
 
   bool displayIsBlank = true;
@@ -187,7 +187,7 @@ class PPU {
  public:
   PPU() = default;
   explicit PPU(std::vector<uint8_t>* m, Display* d) {
-    memory = std::unique_ptr<std::vector<uint8_t>>(m);
+    memory = std::shared_ptr<std::vector<uint8_t>>(m);
     display = std::unique_ptr<Display>(d);
     display->clearWindow();
     bgPalette = {
@@ -196,7 +196,6 @@ class PPU {
         {TRANSPARENT, 4}, {PALETTE[0], 0}, {PALETTE[0], 0}, {PALETTE[0], 0}};
     ob1Palette = {
         {TRANSPARENT, 4}, {PALETTE[0], 0}, {PALETTE[0], 0}, {PALETTE[0], 0}};
-    frameBuffer.reserve(Display::WIDTH * Display::HEIGHT * 4);
     setDisplayBlank();
     frame.create(Display::WIDTH, Display::HEIGHT);
     pushFrame();
@@ -205,7 +204,7 @@ class PPU {
 
   ~PPU() {
     display.release();
-    memory.release();
+    memory.reset();
   }
 
   // static uint8_t currSpriteIndex = 0;

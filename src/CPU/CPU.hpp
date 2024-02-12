@@ -36,7 +36,7 @@ class CPU {
   uint32_t cycles = 0;
   uint32_t frameCycles = 0;
   bool frameDone = false;
-  std::unique_ptr<MMU> memory;
+  std::shared_ptr<MMU> memory;
   std::unique_ptr<PPU> ppu;
   std::unique_ptr<Timers> timers;
   std::unique_ptr<Joypad> joypad;
@@ -254,7 +254,7 @@ class CPU {
  public:
   CPU() = default;
   explicit CPU(MMU* mmu, PPU* p, Timers* t, Joypad* j) {
-    memory = std::unique_ptr<MMU>(mmu);
+    memory = std::shared_ptr<MMU>(mmu);
     ppu = std::unique_ptr<PPU>(p);
     joypad = std::unique_ptr<Joypad>(j);
     timers = std::unique_ptr<Timers>(t);
@@ -263,7 +263,7 @@ class CPU {
   }
   ~CPU() {
     ppu.release();
-    memory.release();
+    memory.reset();
     timers.release();
     joypad.release();
   }

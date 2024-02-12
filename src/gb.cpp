@@ -30,12 +30,10 @@ void reset(CPU& cpu, MMU& mmu, PPU& ppu, std::vector<uint8_t>& rom) {
 
 int main() {
   std::string file = "./roms/pokemon_red.gb";
-  std::vector<uint8_t> rom = util::parseBinFile(file);
+  std::vector<uint8_t> rom = std::move(util::parseBinFile(file));
   std::cout << "Loaded file " << file << "\n";
 
-  MMU mmu(rom, file);
-
-  auto disassembly = util::disassemble(mmu.getMemory());
+  MMU mmu(&rom, file);
 
   Resolution resolution{
       static_cast<uint16_t>(Display::WIDTH * Globals::DISPLAY_SCALE),
@@ -55,7 +53,7 @@ int main() {
 
   static PPUStateWindow ppuStateWindow;
 
-  static DisassemblyViewer disassemblyViewer(disassembly);
+  static std::unique_ptr<DisassemblyViewer> disassemblyViewer;
 
   // Run boot sequence
   if (Globals::skipBootRom) {
@@ -95,12 +93,15 @@ int main() {
           case sf::Keyboard::D:
             Globals::imgui_debug = !Globals::imgui_debug;
             if (Globals::imgui_debug) {
+              auto disassembly = util::disassemble(mmu.getMemory());
+              disassemblyViewer = std::make_unique<DisassemblyViewer>(std::move(disassembly));
               Globals::DISPLAY_SCALE = 4;
               resolution.width = Display::WIDTH * Globals::DISPLAY_SCALE +
                                  Display::DEBUG_WINDOW_SIZE;
               window.create(sf::VideoMode(resolution.width, resolution.height),
                             "gb", sf::Style::Titlebar | sf::Style::Close);
             } else {
+              disassemblyViewer.release();
               resolution.width = Display::WIDTH * Globals::DISPLAY_SCALE;
               window.create(sf::VideoMode(resolution.width, resolution.height),
                             "gb", sf::Style::Titlebar | sf::Style::Close);
@@ -166,7 +167,9 @@ int main() {
     if (Globals::imgui_debug) {
       memEdit.drawWindow("Memory Editor", mmu.getMemory().data(), 0x10000,
                          0x0000);
-      disassemblyViewer.drawWindow(cpu);
+      if (disassemblyViewer != nullptr) {
+        disassemblyViewer->drawWindow(cpu);
+      }
       regWindow.drawWindow(cpu);
       ppuStateWindow.drawWindow(ppu);
     }

@@ -11,6 +11,7 @@ inline std::vector<uint8_t> parseBinFile(std::string filepath) {
   try {
     romFile.open(filepath, std::ios::binary);
     if (!romFile.good()) {
+      romFile.close();
       return {};
     }
     romFile.unsetf(std::ios::skipws);
@@ -26,12 +27,11 @@ inline std::vector<uint8_t> parseBinFile(std::string filepath) {
                std::istream_iterator<uint8_t>());
 
     romFile.close();
-
     return rom;
   } catch (const std::ifstream::failure& e) {
     std::cerr << "Exception opening/reading/closing file " << e.what() << "\n";
   }
-
+  romFile.close();
   return {};
 }
 
@@ -41,9 +41,9 @@ inline void writeBinFile(std::string file, std::vector<uint8_t>& bytes) {
   try {
     saveFile.open(file, std::ios::trunc | std::ios::binary);
     saveFile.write((char*)&bytes[0], bytes.size() * sizeof(uint8_t));
-    saveFile.close();
   } catch (const std::ofstream::failure& e) {
     std::cerr << "Exception opening/writingclosing file " << e.what() << "\n";
   }
+  saveFile.close();
 }
 }  // namespace util

@@ -18,12 +18,12 @@ class Timers {
   const uint8_t TIMER_ENABLE_BIT = 1 << 2;
   const uint8_t TIMER_INPUT_CLOCK_BITS = 0x3;
 
-  std::unique_ptr<std::vector<uint8_t>> memory;
+  std::shared_ptr<std::vector<uint8_t>> memory;
   bool timaInterruptRequest = false;
 
  public:
   explicit Timers(std::vector<uint8_t>* m) {
-    memory = std::unique_ptr<std::vector<uint8_t>>(m);
+    memory = std::shared_ptr<std::vector<uint8_t>>(m);
 
     divHigh = std::unique_ptr<uint8_t>(&(*m)[Address::DIV_REG_ADDR]);
     divLow = std::unique_ptr<uint8_t>(&(*m)[Address::DIV_REG_ADDR - 1]);
@@ -38,7 +38,7 @@ class Timers {
     tima.release();
     tma.release();
     tac.release();
-    memory.release();
+    memory.reset();
   }
 
   void incrementDIV() {
