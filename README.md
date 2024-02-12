@@ -1,5 +1,5 @@
 # gb
-A gb emulator in the works.
+A gb emulator in the works. Though not really working on it anymore :(
 
 Using SFML for display purposes. Only on Windows for now, should be able to use the vs project file to build (not sure haven't tried yet but there's not much to try).
 Uses static SFML linking but might need to add in `openal32.dll` into your executable directory (can get from SFML2.5 download).
@@ -17,3 +17,5 @@ Todo:
 * gbc support (long-term)
 
 ![Image of Emulator](https://i.imgur.com/xcySfEz.png)
+
+![Another Image of Emulator](https://i.imgur.com/VkR8seN.png)
