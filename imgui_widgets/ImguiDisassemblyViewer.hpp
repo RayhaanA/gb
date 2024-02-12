@@ -3,8 +3,9 @@
 #include <string>
 #include <vector>
 
-#include "../src/util/Disassembler.hpp"
 #include "../src/Globals.hpp"
+#include "../src/PPU/Display.hpp"
+#include "../src/util/Disassembler.hpp"
 #include "imgui.h"
 
 struct DisassemblyViewer {
@@ -29,7 +30,13 @@ struct DisassemblyViewer {
     static int32_t targetPC = 0;
     static int32_t clicked = 0;
 
-    ImGui::Begin("Disassembly", 0, ImGuiWindowFlags_MenuBar);
+    ImGui::Begin("Disassembly", 0,
+                 ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+    ImGui::SetNextWindowSize(
+        ImVec2(Display::DISASSEMBLY_WINDOW_W, Display::DISASSEMBLY_WINDOW_H));
+    ImGui::SetNextWindowPos(
+        ImVec2(Display::DISASSEMBLY_WINDOW_X, Display::DISASSEMBLY_WINDOW_Y));
     if (ImGui::BeginMenuBar()) {
       if (ImGui::BeginMenu("Options")) {
         ImGui::MenuItem("Track current instruction", nullptr,
@@ -47,6 +54,9 @@ struct DisassemblyViewer {
       if (!ImGui::Begin("Instruction Jump", &showInstructionJumpWindow)) {
         ImGui::End();
       } else {
+        ImGui::SetNextWindowPos(ImVec2(Display::DISASSEMBLY_WINDOW_X,
+                                       Display::DISASSEMBLY_WINDOW_Y),
+                                ImGuiCond_FirstUseEver);
         ImGui::Text("Run until:");
         ImGui::InputInt("", &targetPC, 1, 100,
                         ImGuiInputTextFlags_CharsHexadecimal);

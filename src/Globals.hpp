@@ -4,28 +4,22 @@
 constexpr std::size_t operator""_KB(unsigned long long v) { return 1024u * v; }
 
 namespace Globals {
-static bool running = false;
-static bool skipBootRom = true;
+static bool running = true;
+static bool skipBootRom = false;
 static bool needToRunBootRom = !skipBootRom;
+static bool imgui_debug = false;
+static uint16_t DISPLAY_SCALE = 4;
 
-const size_t WIDTH = 160;
-const size_t HEIGHT = 144;
 const uint8_t UNDEFINED_READ = 0xFF;
 
 const uint32_t FREQUENCY = 4194304;
 const uint32_t CYCLES_PER_FRAME = 70224;
 const uint8_t CYCLES_PER_INCREMENT = 4;
-const uint8_t LEGACY_CYCLES_PER_INCREMENT = 4;
-const uint8_t CPU_CYCLES_PER_INCREMENT = 4;
 
 static bool IME = false;  // Interrupt Master Enable Flag: Set through op codes
 static bool wroteZeroToVBLIF = false;
 static bool ramEnable = false;
 static bool resetSysCounter = false;
-
-// static uint8_t currSpriteIndex = 0;
-const uint8_t MAX_SPRITES = 40;
-const uint16_t SPRITE_BYTE_WIDTH = 4;
 
 constexpr uint8_t SERIAL_INTERRUPT_FLAG = 1 << 3;
 }  // namespace Globals

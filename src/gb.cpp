@@ -30,16 +30,19 @@ void reset(CPU& cpu, MMU& mmu, PPU& ppu, std::vector<uint8_t>& rom) {
 
 int main() {
   std::string file = "./roms/pokemon_red.gb";
-  std::vector<uint8_t> rom = util::parseRomFile(file);
+  std::vector<uint8_t> rom = util::parseBinFile(file);
   std::cout << "Loaded file " << file << "\n";
 
-  MMU mmu(rom);
+  MMU mmu(rom, file);
 
   auto disassembly = util::disassemble(mmu.getMemory());
 
-  Resolution r{1080, 560};
-  sf::RenderWindow w(sf::VideoMode(r.width, r.height), "gb");
-  Display display(r, &w);
+  Resolution resolution{
+      static_cast<uint16_t>(Display::WIDTH * Globals::DISPLAY_SCALE),
+      static_cast<uint16_t>(Display::HEIGHT * Globals::DISPLAY_SCALE)};
+  sf::RenderWindow window(sf::VideoMode(resolution.width, resolution.height),
+                          "gb", sf::Style::Titlebar | sf::Style::Close);
+  Display display(resolution, &window);
 
   Timers timers(&mmu.getMemory());
   PPU ppu(&mmu.getMemory(), &display);
@@ -87,7 +90,35 @@ int main() {
             Globals::skipBootRom = !Globals::skipBootRom;
             break;
           case sf::Keyboard::Space:
-            display.setFps(120);
+            display.setFps(144);
+            break;
+          case sf::Keyboard::D:
+            Globals::imgui_debug = !Globals::imgui_debug;
+            if (Globals::imgui_debug) {
+              Globals::DISPLAY_SCALE = 4;
+              resolution.width = Display::WIDTH * Globals::DISPLAY_SCALE +
+                                 Display::DEBUG_WINDOW_SIZE;
+              window.create(sf::VideoMode(resolution.width, resolution.height),
+                            "gb", sf::Style::Titlebar | sf::Style::Close);
+            } else {
+              resolution.width = Display::WIDTH * Globals::DISPLAY_SCALE;
+              window.create(sf::VideoMode(resolution.width, resolution.height),
+                            "gb", sf::Style::Titlebar | sf::Style::Close);
+            }
+            break;
+          case sf::Keyboard::Equal:
+            if (Globals::imgui_debug || Globals::DISPLAY_SCALE >= 8) break;
+            ++Globals::DISPLAY_SCALE;
+            window.setSize(
+                sf::Vector2u(Display::WIDTH * Globals::DISPLAY_SCALE,
+                             Display::HEIGHT * Globals::DISPLAY_SCALE));
+            break;
+          case sf::Keyboard::Dash:
+            if (Globals::imgui_debug || Globals::DISPLAY_SCALE <= 1) break;
+            --Globals::DISPLAY_SCALE;
+            window.setSize(
+                sf::Vector2u(Display::WIDTH * Globals::DISPLAY_SCALE,
+                             Display::HEIGHT * Globals::DISPLAY_SCALE));
             break;
           case sf::Keyboard::Z:
           case sf::Keyboard::X:
@@ -132,14 +163,16 @@ int main() {
     // Some blargg tests have weird output locations, leave this for those
     // while (mmu.getMemory()[0xA004 + i] != '\0')
     //  std::cout << mmu.getMemory()[0xA004 + i++];
-
-    memEdit.drawWindow("Memory Editor", mmu.getMemory().data(), 0x10000,
-                       0x0000);
-    disassemblyViewer.drawWindow(cpu);
-    regWindow.drawWindow(cpu);
-    ppuStateWindow.drawWindow(ppu);
+    if (Globals::imgui_debug) {
+      memEdit.drawWindow("Memory Editor", mmu.getMemory().data(), 0x10000,
+                         0x0000);
+      disassemblyViewer.drawWindow(cpu);
+      regWindow.drawWindow(cpu);
+      ppuStateWindow.drawWindow(ppu);
+    }
     display.render(ppu.getFrame());
   }
 
+  ImGui::SFML::Shutdown();
   return EXIT_SUCCESS;
 }

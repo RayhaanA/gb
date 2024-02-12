@@ -6,8 +6,9 @@
 
 class NoMBC : public MemoryController {
  public:
-  NoMBC(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo)
-      : MemoryController(r, romInfo, ramInfo) {
+  NoMBC(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo,
+        std::string file)
+      : MemoryController(r, romInfo, ramInfo, false, file) {
     Globals::ramEnable = true;
   }
   ~NoMBC() = default;

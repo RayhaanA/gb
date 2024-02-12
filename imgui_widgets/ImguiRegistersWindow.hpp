@@ -1,5 +1,6 @@
 #pragma once
 #include "../src/CPU/CPU.hpp"
+#include "../src/PPU/Display.hpp"
 #include "imgui.h"
 
 struct RegistersWindow {
@@ -22,8 +23,13 @@ struct RegistersWindow {
     static bool baseIsDec = false;
     static BASE base = BASE::HEX;
 
-    ImGui::Begin("Registers State", 0, ImGuiWindowFlags_MenuBar);
-
+    ImGui::Begin("Registers State", 0,
+                 ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse |
+                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+    ImGui::SetNextWindowSize(ImVec2(Display::REGISTERS_STATE_WINDOW_W,
+                                    Display::REGISTERS_STATE_WINDOW_H));
+    ImGui::SetNextWindowPos(ImVec2(Display::REGISTERS_STATE_WINDOW_X,
+                                   Display::REGISTERS_STATE_WINDOW_Y));
     if (ImGui::BeginMenuBar()) {
       if (ImGui::BeginMenu("Options")) {
         ImGui::MenuItem("View values as decimal", nullptr, &baseIsDec);

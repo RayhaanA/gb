@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 
+#include "../util/ParseBinFile.hpp"
 #include "MemoryController.hpp"
 
 class MBC3 : public MemoryController {
@@ -9,8 +10,9 @@ class MBC3 : public MemoryController {
   bool defaultMode = true;
 
  public:
-  MBC3(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo)
-      : MemoryController(r, romInfo, ramInfo) {
+  MBC3(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo, bool battery,
+       std::string file)
+      : MemoryController(r, romInfo, ramInfo, battery, file) {
     Globals::ramEnable = false;
   }
   ~MBC3() = default;

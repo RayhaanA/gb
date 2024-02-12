@@ -186,14 +186,14 @@ void CPU::triggerOAMBug(bool read) {
   // Doesn't happen if PPU accessing first two sprites (or PPU is finished OAM
   // search)
   if (ppu->getCurrSpriteIndex() < 2 ||
-      ppu->getCurrSpriteIndex() == Globals::MAX_SPRITES) {
+      ppu->getCurrSpriteIndex() == PPU::MAX_SPRITES) {
     return;
   }
 
   uint8_t row = (ppu->getCurrSpriteIndex() & 1) ? ppu->getCurrSpriteIndex() - 1
                                                 : ppu->getCurrSpriteIndex() / 2;
   uint16_t rowStartAddr =
-      Address::OAM_TABLE_ADDR + row * (2 * Globals::SPRITE_BYTE_WIDTH);
+      Address::OAM_TABLE_ADDR + row * (2 * PPU::SPRITE_BYTE_WIDTH);
 
   if (!read) {
     // Calculate new value for first word in row (words are 16-bit in OAM)
@@ -209,7 +209,7 @@ void CPU::triggerOAMBug(bool read) {
 
     for (int32_t i = 2; i < 8; ++i) {
       memory->directWrite(memory->directRead(rowStartAddr + i -
-                                             (2 * Globals::SPRITE_BYTE_WIDTH)),
+                                             (2 * PPU::SPRITE_BYTE_WIDTH)),
                           rowStartAddr + i);
     }
   } else {
@@ -225,7 +225,7 @@ void CPU::triggerOAMBug(bool read) {
 
     for (int32_t i = 2; i < 8; ++i) {
       memory->directWrite(memory->directRead(rowStartAddr + i -
-                                             (2 * Globals::SPRITE_BYTE_WIDTH)),
+                                             (2 * PPU::SPRITE_BYTE_WIDTH)),
                           rowStartAddr + i);
     }
   }
@@ -237,12 +237,12 @@ void CPU::triggerOAMBugIncrease() {
   uint8_t row = (ppu->getCurrSpriteIndex() & 1) ? ppu->getCurrSpriteIndex() - 1
                                                 : ppu->getCurrSpriteIndex() / 2;
   uint16_t rowStartAddr =
-      Address::OAM_TABLE_ADDR + row * (2 * Globals::SPRITE_BYTE_WIDTH);
+      Address::OAM_TABLE_ADDR + row * (2 * PPU::SPRITE_BYTE_WIDTH);
 
   // First corruption doesn't happen if PPU accessingn first 8 sprites, or last
   // 2
   if (!(ppu->getCurrSpriteIndex() < 8 ||
-        ppu->getCurrSpriteIndex() >= (Globals::MAX_SPRITES - 2))) {
+        ppu->getCurrSpriteIndex() >= (PPU::MAX_SPRITES - 2))) {
     uint8_t newValue = oamBugReadIncrease(memory->directRead(rowStartAddr - 16),
                                           memory->directRead(rowStartAddr - 8),
                                           memory->directRead(rowStartAddr),
@@ -257,10 +257,10 @@ void CPU::triggerOAMBugIncrease() {
 
     for (int32_t i = 0; i < 8; ++i) {
       memory->directWrite(memory->directRead(rowStartAddr + i -
-                                             (2 * Globals::SPRITE_BYTE_WIDTH)),
+                                             (2 * PPU::SPRITE_BYTE_WIDTH)),
                           rowStartAddr + i);
       memory->directWrite(memory->directRead(rowStartAddr + i -
-                                             (2 * Globals::SPRITE_BYTE_WIDTH)),
+                                             (2 * PPU::SPRITE_BYTE_WIDTH)),
                           rowStartAddr - 16 + i);
     }
   }

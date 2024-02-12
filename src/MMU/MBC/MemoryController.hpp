@@ -1,5 +1,8 @@
 #pragma once
+#include <vector>
+
 #include "../../PPU/PPU.hpp"
+#include "../../util/ParseBinFile.hpp"
 
 class MemoryController {
  protected:
@@ -12,10 +15,18 @@ class MemoryController {
   uint16_t ramBank = 0;
   const size_t BASE_ROM_SIZE = 32_KB;
   uint16_t romBankMask = 0;
+  bool hasBattery = false;
+  std::string ramFile;
+
+  std::string getSavFileForGbFile() {
+    return ramFile.substr(0, ramFile.length() - 3) + ".sav";
+  }
 
  public:
   explicit MemoryController(std::vector<uint8_t>* r, uint8_t romInfo,
-                            uint8_t ramInfo) {
+                            uint8_t ramInfo, bool battery, std::string file) {
+    hasBattery = battery;
+    ramFile = file;
     rom = std::unique_ptr<std::vector<uint8_t>>(r);
     romSize = BASE_ROM_SIZE << romInfo;
     numRomBanks = 2 << romInfo;
@@ -44,10 +55,36 @@ class MemoryController {
         numRamBanks = 8;
         break;
     }
+    std::cout << "Rom size " << romSize << "\nRam size " << ramSize << "\n";
   }
   ~MemoryController() { rom.release(); }
   virtual uint8_t read(std::vector<uint8_t>& memory, uint16_t address,
                        PPU& ppu) = 0;
   virtual void write(std::vector<uint8_t>& memory, uint8_t data,
                      uint16_t address, PPU& ppu) = 0;
+
+  void readRamFromFile(std::vector<uint8_t>& memory) {
+    if (!hasBattery) return;
+    std::cout << "Reading saved RAM from file\n";
+    std::string ramFile = getSavFileForGbFile();
+    std::vector<uint8_t> savedRam = util::parseBinFile(ramFile);
+    if (savedRam.size() < 8_KB) {
+      return;
+    }
+    for (int i = 0; i <= 16_KB; ++i) {
+      memory[0xA000 + i] = savedRam[i];
+    }
+  }
+
+  void writeRamToFile(std::vector<uint8_t>& memory) {
+    if (!hasBattery) return;
+    std::cout << "Writing current RAM from file\n";
+    std::vector<uint8_t>::const_iterator first = memory.begin() + 0xA000;
+    std::vector<uint8_t>::const_iterator last = memory.begin() + 0xE000;
+
+    std::vector<uint8_t> currentRam(first, last);
+
+    std::string ramFile = getSavFileForGbFile();
+    util::writeBinFile(ramFile, currentRam);
+  }
 };

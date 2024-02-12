@@ -33,8 +33,11 @@ void PPU::incrementLY() {
 }
 
 void PPU::setDisplayBlank() {
-  for (size_t i = 0; i < frameBuffer.size(); ++i) {
-    frameBuffer[i] = 255;
+  for (size_t i = 0; i < Display::WIDTH * Display::HEIGHT; i += 4) {
+    frameBuffer[i] = PALETTE[0].r;
+    frameBuffer[i + 1] = PALETTE[0].g;
+    frameBuffer[i + 2] = PALETTE[0].b;
+    frameBuffer[i + 3] = PALETTE[0].a;
   }
   frame.update(frameBuffer.data());
 }
@@ -103,10 +106,10 @@ void PPU::tick() {
           }
 
           if (spriteIsVisible(Address::OAM_TABLE_ADDR +
-                              currSpriteIndex * Globals::SPRITE_BYTE_WIDTH)) {
+                              currSpriteIndex * PPU::SPRITE_BYTE_WIDTH)) {
             spritesForCurrLine.push_back(
                 createSprite(Address::OAM_TABLE_ADDR +
-                                 currSpriteIndex * Globals::SPRITE_BYTE_WIDTH,
+                                 currSpriteIndex * PPU::SPRITE_BYTE_WIDTH,
                              currSpriteIndex));
           }
         }
@@ -393,7 +396,7 @@ void PPU::drawScanLine() {
   uint8_t yPos = inWindow ? (ly - wy) : (scy + ly);
   uint16_t tileRow = (static_cast<uint8_t>(yPos / 8) * 32);
 
-  for (uint8_t i = 0; i < Globals::WIDTH; ++i) {
+  for (uint8_t i = 0; i < Display::WIDTH; ++i) {
     uint8_t xPos = i + scx;
 
     if (inWindow) {
@@ -424,14 +427,14 @@ void PPU::drawScanLine() {
     int32_t color = (getBitValue(secondDataRow, colorBit) << 1) |
                     getBitValue(firstDataRow, colorBit);
 
-    if (ly < 0 || ly >= Globals::HEIGHT) {
+    if (ly < 0 || ly >= Display::HEIGHT) {
       continue;
     }
 
-    frameBuffer[(i + (Globals::WIDTH * ly)) * 4] = bgPalette[color].first.r;
-    frameBuffer[(i + (Globals::WIDTH * ly)) * 4 + 1] = bgPalette[color].first.g;
-    frameBuffer[(i + (Globals::WIDTH * ly)) * 4 + 2] = bgPalette[color].first.b;
-    frameBuffer[(i + (Globals::WIDTH * ly)) * 4 + 3] = bgPalette[color].first.a;
+    frameBuffer[(i + (Display::WIDTH * ly)) * 4] = bgPalette[color].first.r;
+    frameBuffer[(i + (Display::WIDTH * ly)) * 4 + 1] = bgPalette[color].first.g;
+    frameBuffer[(i + (Display::WIDTH * ly)) * 4 + 2] = bgPalette[color].first.b;
+    frameBuffer[(i + (Display::WIDTH * ly)) * 4 + 3] = bgPalette[color].first.a;
   }
 }
 
@@ -471,14 +474,14 @@ void PPU::drawSprites() {
       int32_t xPos = -i + 7;
       int32_t pixel = sprite.x + xPos;
 
-      if (ly < 0 || ly >= Globals::HEIGHT) {
+      if (ly < 0 || ly >= Display::HEIGHT) {
         continue;
       }
 
-      frameBuffer[(pixel + (Globals::WIDTH * ly)) * 4] = pixelColor.r;
-      frameBuffer[(pixel + (Globals::WIDTH * ly)) * 4 + 1] = pixelColor.g;
-      frameBuffer[(pixel + (Globals::WIDTH * ly)) * 4 + 2] = pixelColor.b;
-      frameBuffer[(pixel + (Globals::WIDTH * ly)) * 4 + 3] = 255;
+      frameBuffer[(pixel + (Display::WIDTH * ly)) * 4] = pixelColor.r;
+      frameBuffer[(pixel + (Display::WIDTH * ly)) * 4 + 1] = pixelColor.g;
+      frameBuffer[(pixel + (Display::WIDTH * ly)) * 4 + 2] = pixelColor.b;
+      frameBuffer[(pixel + (Display::WIDTH * ly)) * 4 + 3] = 255;
     }
   }
 }

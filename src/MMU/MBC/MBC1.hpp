@@ -9,8 +9,9 @@ class MBC1 : public MemoryController {
   bool defaultMode = true;
 
  public:
-  MBC1(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo)
-      : MemoryController(r, romInfo, ramInfo) {
+  MBC1(std::vector<uint8_t>* r, uint8_t romInfo, uint8_t ramInfo, bool battery,
+       std::string file)
+      : MemoryController(r, romInfo, ramInfo, battery, file) {
     Globals::ramEnable = false;
   }
   ~MBC1() = default;
@@ -145,9 +146,12 @@ class MBC1 : public MemoryController {
         if (romBankNumber > numRomBanks) {
           romBankNumber = romBankNumber & romBankMask;
         }
-        if (romBankNumber == 0x20) romBankNumber = 0x21;
-        else if (romBankNumber == 0x40) romBankNumber = 0x41;
-        else if (romBankNumber == 0x60) romBankNumber = 0x61;
+        if (romBankNumber == 0x20)
+          romBankNumber = 0x21;
+        else if (romBankNumber == 0x40)
+          romBankNumber = 0x41;
+        else if (romBankNumber == 0x60)
+          romBankNumber = 0x61;
         romBank = romBankNumber;
         break;
       }

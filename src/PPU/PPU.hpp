@@ -196,12 +196,10 @@ class PPU {
         {TRANSPARENT, 4}, {PALETTE[0], 0}, {PALETTE[0], 0}, {PALETTE[0], 0}};
     ob1Palette = {
         {TRANSPARENT, 4}, {PALETTE[0], 0}, {PALETTE[0], 0}, {PALETTE[0], 0}};
-    frameBuffer.reserve(Globals::WIDTH * Globals::HEIGHT * 4);
-    for (size_t i = 0; i < frameBuffer.capacity(); ++i) {
-      frameBuffer.push_back(255);
-    }
-    frame.create(Globals::WIDTH, Globals::HEIGHT);
-    frame.update(frameBuffer.data());
+    frameBuffer.reserve(Display::WIDTH * Display::HEIGHT * 4);
+    setDisplayBlank();
+    frame.create(Display::WIDTH, Display::HEIGHT);
+    pushFrame();
     spritesForCurrLine.reserve(MAX_SPRITES_PER_LINE);
   }
 
@@ -209,6 +207,10 @@ class PPU {
     display.release();
     memory.release();
   }
+
+  // static uint8_t currSpriteIndex = 0;
+  static const uint8_t MAX_SPRITES = 40;
+  static const uint16_t SPRITE_BYTE_WIDTH = 4;
 
   void reset() {
     display->clearWindow();
@@ -218,12 +220,10 @@ class PPU {
         {TRANSPARENT, 4}, {PALETTE[0], 0}, {PALETTE[0], 0}, {PALETTE[0], 0}};
     ob1Palette = {
         {TRANSPARENT, 4}, {PALETTE[0], 0}, {PALETTE[0], 0}, {PALETTE[0], 0}};
-    frameBuffer.reserve(Globals::WIDTH * Globals::HEIGHT * 4);
-    for (size_t i = 0; i < frameBuffer.capacity(); ++i) {
-      frameBuffer[i] = 255;
-    }
+    frameBuffer.reserve(Display::WIDTH * Display::HEIGHT * 4);
+    setDisplayBlank();
 
-    frame.create(Globals::WIDTH, Globals::HEIGHT);
+    frame.create(Display::WIDTH, Display::HEIGHT);
     frame.update(frameBuffer.data());
     modeCycles = 0;
     ly = 0;
